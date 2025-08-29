@@ -1,0 +1,183 @@
+---
+import { Icon } from "astro-icon/components";
+import { licenseConfig, profileConfig } from "../../config";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
+import { formatDateToYYYYMMDD } from "../../utils/date-utils";
+
+interface Props {
+	title: string;
+	slug: string;
+	pubDate: Date;
+	class: string;
+	lang?: string;
+}
+
+const { title, pubDate, lang } = Astro.props;
+const className = Astro.props.class;
+const profileConf = profileConfig;
+const licenseConf = licenseConfig;
+const postUrl = decodeURIComponent(Astro.url.toString());
+
+// 从URL中提取语言或使用传入的lang参数
+function extractLangFromUrl(url: string): string {
+	const match = url.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+	if (match) {
+		const supportedLangs = ['zh_cn', 'en', 'ja', 'ru'];
+		if (supportedLangs.includes(match[1])) {
+			return match[1];
+		}
+	}
+	return 'zh_cn';
+}
+
+const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
+---
+<div class={`relative transition overflow-hidden bg-[var(--license-block-bg)] py-5 px-6 ${className}`}>
+    <div class="transition font-bold text-black/75 dark:text-white/75">
+        {title}
+    </div>
+    <a href={postUrl} class="link text-[var(--primary)]">
+        {postUrl}
+    </a>
+    <div class="flex gap-6 mt-2">
+        <div>
+            <div class="transition text-black/30 dark:text-white/30 text-sm">{i18n(I18nKey.author, currentLang)}</div>
+            <div class="transition text-black/75 dark:text-white/75 line-clamp-2">{profileConf.name}</div>
+        </div>
+        <div>
+            <div class="transition text-black/30 dark:text-white/30 text-sm">{i18n(I18nKey.publishedAt, currentLang)}</div>
+            <div class="transition text-black/75 dark:text-white/75 line-clamp-2">{formatDateToYYYYMMDD(pubDate)}</div>
+        </div>
+        <div>
+            <div class="transition text-black/30 dark:text-white/30 text-sm">{i18n(I18nKey.license, currentLang)}</div>
+            <a href={licenseConf.url} target="_blank" class="link text-[var(--primary)] line-clamp-2">{licenseConf.name}</a>
+        </div>
+    </div>
+    <Icon name="fa6-brands:creative-commons" class="transition text-[15rem] absolute pointer-events-none right-6 top-1/2 -translate-y-1/2 text-black/5 dark:text-white/5"></Icon>
+</div>
+
+<script>
+// 更新版权提示文本的函数
+function updateLicenseText(lang: string) {
+
+    
+    // 定义翻译映射
+    const translations = {
+        'zh_cn': {
+            'author': '作者',
+            'publishedAt': '发布于',
+            'license': '许可协议'
+        },
+        'en': {
+            'author': 'Author',
+            'publishedAt': 'Published at',
+            'license': 'License'
+        },
+        'ja': {
+            'author': '著者',
+            'publishedAt': '公開日',
+            'license': 'ライセンス'
+        },
+        'ru': {
+            'author': 'Автор',
+            'publishedAt': 'Опубликовано',
+            'license': 'Лицензия'
+        }
+    };
+    
+    const currentTranslations = translations[lang as keyof typeof translations] || translations['zh_cn'];
+
+    
+    const licenseContainer = document.querySelector('div[class*="license-block-bg"]');
+    if (!licenseContainer) return;
+    
+    // 查找所有小标签文本元素，按顺序更新
+    const labelElements = licenseContainer.querySelectorAll('div.text-sm');
+    
+    // 按索引直接更新对应的标签
+    if (labelElements[0]) {
+        labelElements[0].textContent = currentTranslations['author'];
+    }
+    if (labelElements[1]) {
+        labelElements[1].textContent = currentTranslations['publishedAt'];
+    }
+    if (labelElements[2]) {
+        labelElements[2].textContent = currentTranslations['license'];
+    }
+
+}
+
+// 监听语言变化事件
+function setupLicenseLanguageListener() {
+    window.addEventListener('languageChanged', (event: any) => {
+        if (event.detail && event.detail.lang) {
+            updateLicenseText(event.detail.lang);
+        }
+    });
+}
+
+// 从URL中提取当前语言
+function getCurrentLanguageFromUrl(): string {
+    const path = window.location.pathname;
+    const match = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+    if (match) {
+        const supportedLangs = ['zh_cn', 'en', 'ja', 'ru'];
+        if (supportedLangs.includes(match[1])) {
+            return match[1];
+        }
+    }
+    return 'zh_cn'; // 默认语言
+}
+
+// 从Cookie中获取语言偏好
+function getLanguageFromCookie(): string | null {
+    const nameEQ = "preferred-language=";
+    const ca = document.cookie.split(";");
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === " ") c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+// 获取当前应该使用的语言
+function getCurrentLanguage(): string {
+    // 优先使用Cookie中的语言
+    const cookieLang = getLanguageFromCookie();
+    if (cookieLang) {
+        return cookieLang;
+    }
+    
+    // 其次使用URL中的语言
+    return getCurrentLanguageFromUrl();
+}
+
+// 初始化License组件语言
+function initializeLicenseLanguage() {
+    setupLicenseLanguageListener();
+}
+
+// 页面加载时设置监听器
+document.addEventListener('DOMContentLoaded', () => {
+    initializeLicenseLanguage();
+});
+
+// 监听Swup页面切换完成事件
+if (typeof window !== 'undefined' && window.swup) {
+    window.swup.hooks.on('content:replace', () => {
+        // Swup导航完成后重新初始化
+        initializeLicenseLanguage();
+    });
+} else {
+    // 如果Swup还未加载，延迟监听
+    setTimeout(() => {
+        if (window.swup) {
+            window.swup.hooks.on('content:replace', () => {
+                initializeLicenseLanguage();
+            });
+        }
+    }, 100);
+}
+</script>

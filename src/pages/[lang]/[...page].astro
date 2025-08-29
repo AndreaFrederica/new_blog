@@ -1,0 +1,50 @@
+---
+import type { GetStaticPaths } from "astro";
+import Pagination from "../../components/control/Pagination.astro";
+import PostPage from "../../components/PostPage.astro";
+import { PAGE_SIZE } from "../../constants/constants";
+import MainGridLayout from "../../layouts/MainGridLayout.astro";
+import { getSortedPostsByLanguage } from "../../utils/content-utils";
+import { siteConfig } from "../../config";
+import { isSupportedLanguage } from "@utils/i18n-utils";
+
+export const getStaticPaths = (async ({ paginate }) => {
+	const paths = [];
+	const supportedLangs = siteConfig.supportedLangs || ["en"];
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	
+	// 为每个支持的语言（除默认语言外）生成分页路径
+	for (const lang of supportedLangs) {
+		if (lang === defaultLang) continue; // 默认语言使用根路径
+		
+		// 获取该语言的文章
+		const langPosts = await getSortedPostsByLanguage(lang);
+		
+		// 生成分页路径
+		const paginatedPaths = paginate(langPosts, { 
+			pageSize: PAGE_SIZE,
+			params: { lang },
+			props: { lang }
+		});
+		
+		paths.push(...paginatedPaths);
+	}
+	
+	return paths;
+}) satisfies GetStaticPaths;
+
+const { page, lang } = Astro.props;
+const { lang: langParam } = Astro.params;
+
+// 验证语言参数
+if (!isSupportedLanguage(langParam)) {
+	return Astro.redirect('/404');
+}
+
+const len = page.data.length;
+---
+
+<MainGridLayout lang={langParam}>
+    <PostPage page={page} lang={langParam}></PostPage>
+    <Pagination class="mx-auto onload-animation" page={page} style={`animation-delay: calc(var(--content-delay) + ${(len)*50}ms)`}></Pagination>
+</MainGridLayout>

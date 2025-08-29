@@ -1,0 +1,77 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { getPostTranslations } from "@utils/content-utils";
+import {
+	getLanguageName,
+	getPostUrl,
+	isDefaultLanguage,
+} from "@utils/i18n-utils";
+import { siteConfig } from "@/config";
+
+interface Props {
+	currentLang: string;
+	translationKey?: string;
+	currentSlug?: string;
+}
+
+const { currentLang, translationKey, currentSlug } = Astro.props;
+let translations: CollectionEntry<"posts">[] = [];
+
+if (translationKey) {
+	translations = await getPostTranslations(translationKey);
+}
+
+// 如果没有翻译版本，不显示语言切换器
+const shouldShow = siteConfig.showLanguageSwitcher && translations.length > 1;
+---
+
+{shouldShow && (
+	<div class="language-switcher">
+		<div class="language-switcher-label">
+			<i class="fa6-solid:language"></i>
+			<span>语言</span>
+		</div>
+		<div class="language-options">
+			{translations.map(post => {
+				const isActive = post.data.lang === currentLang;
+				const url = getPostUrl(post.slug, post.data.lang);
+				return (
+					<a 
+						href={url}
+						class:list={["lang-link", { active: isActive }]}
+						title={`切换到${getLanguageName(post.data.lang)}`}
+					>
+						{getLanguageName(post.data.lang)}
+					</a>
+				);
+			})}
+		</div>
+	</div>
+)}
+
+<style>
+	.language-switcher {
+		@apply flex items-center gap-3 text-sm;
+	}
+	
+	.language-switcher-label {
+		@apply flex items-center gap-1 text-black/75 dark:text-white/75;
+	}
+	
+	.language-options {
+		@apply flex items-center gap-2;
+	}
+	
+	.lang-link {
+		@apply px-2 py-1 rounded-md text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors;
+		@apply hover:bg-black/5 dark:hover:bg-white/10;
+	}
+	
+	.lang-link.active {
+		@apply text-black dark:text-white bg-black/10 dark:bg-white/20 font-medium;
+	}
+	
+	.lang-link:hover {
+		@apply no-underline;
+	}
+</style>

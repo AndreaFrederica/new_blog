@@ -1,0 +1,386 @@
+---
+import { getLanguageName, getLanguageSwitchUrl } from "@utils/i18n-utils";
+import { Icon } from "astro-icon/components";
+import { siteConfig } from "@/config";
+import { type NavBarLink } from "../../types/config";
+import { url } from "../../utils/url-utils";
+import { i18n } from "@i18n/translation";
+import I18nKey from "@i18n/i18nKey";
+
+interface Props {
+	links: NavBarLink[];
+}
+
+const links = Astro.props.links;
+const currentPath = Astro.url.pathname;
+
+// 从URL中提取当前语言
+function getCurrentLanguage(path: string): string {
+	const match = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+	if (match && siteConfig.supportedLangs?.includes(match[1])) {
+		return match[1];
+	}
+	return siteConfig.defaultLang || "zh_cn";
+}
+
+const currentLang = getCurrentLanguage(currentPath);
+const supportedLangs = siteConfig.supportedLangs || ["zh_cn", "en"];
+const shouldShowLangSwitcher =
+	siteConfig.showLanguageSwitcher && supportedLangs.length > 1;
+---
+<div id="nav-menu-panel" class:list={["float-panel float-panel-closed absolute transition-all fixed right-4 px-2 py-2"]}>
+    {links.map((link) => (
+        <a href={link.external ? link.url : url(link.url)} class="group flex justify-between items-center py-2 pl-3 pr-1 gap-8
+            hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition
+        "
+           target={link.external ? "_blank" : null}
+        >
+            <div class="transition text-black/75 dark:text-white/75 font-bold group-hover:text-[var(--primary)] group-active:text-[var(--primary)]">
+                {link.name}
+            </div>
+            {!link.external && <Icon name="material-symbols:chevron-right-rounded"
+                  class="transition text-[1.25rem] text-[var(--primary)]"
+            />}
+            {link.external && <Icon name="fa6-solid:arrow-up-right-from-square"
+                  class="transition text-[0.75rem] text-black/25 dark:text-white/25 -translate-x-1"
+            />}
+        </a>
+    ))}
+    
+    {shouldShowLangSwitcher && (
+        <div class="border-t border-[var(--line-divider)] mt-2 pt-2">
+            <div class="text-black/50 dark:text-white/50 text-sm font-medium px-3 py-1">
+                <Icon name="fa6-solid:language" class="inline mr-2" />
+                {i18n(I18nKey.language, currentLang)}
+            </div>
+            {supportedLangs.map(lang => {
+                const isActive = lang === currentLang;
+                const url = getLanguageSwitchUrl(currentPath, lang);
+                return (
+                    <a href={url} class:list={[
+                        "group flex justify-between items-center py-2 pl-6 pr-1 gap-8",
+                        "hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition",
+                        { "bg-[var(--btn-plain-bg-hover)]": isActive }
+                    ]} data-lang-switch={lang}>
+                        <div class:list={[
+                            "transition font-medium",
+                            isActive ? "text-[var(--primary)]" : "text-black/60 dark:text-white/60 group-hover:text-[var(--primary)] group-active:text-[var(--primary)]"
+                        ]}>
+                            {getLanguageName(lang)}
+                        </div>
+                        {isActive && <Icon name="material-symbols:check" class="text-[1rem] text-[var(--primary)]" />}
+                    </a>
+                );
+            })}
+        </div>
+    )}
+</div>
+
+<script>
+	// Cookie 工具函数
+	function setCookie(name: string, value: string, days: number = 365) {
+		const expires = new Date();
+		expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+		document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+	}
+
+	function getCookie(name: string): string | null {
+		const nameEQ = name + "=";
+		const ca = document.cookie.split(';');
+		for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
+			while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+			if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+		}
+		return null;
+	}
+
+	// 获取浏览器首选语言的函数
+	function getBrowserPreferredLanguage(): string {
+		const supportedLangs = ['zh_cn', 'en']; // NavMenuPanel中使用固定的支持语言列表
+		const browserLangs = navigator.languages || [navigator.language];
+		
+		for (const browserLang of browserLangs) {
+			const normalizedLang = browserLang.toLowerCase().replace('-', '_');
+			
+			// 繁体中文（港澳台）映射到简体中文
+			if (normalizedLang === 'zh_tw' || normalizedLang === 'zh_hk' || normalizedLang === 'zh_mo') {
+				return 'zh_cn';
+			}
+			
+			if (supportedLangs.includes(normalizedLang)) {
+				return normalizedLang;
+			}
+			// 尝试匹配语言的主要部分（如 en-US -> en）
+			const mainLang = normalizedLang.split('_')[0];
+			if (supportedLangs.includes(mainLang)) {
+				return mainLang;
+			}
+		}
+		
+		return 'en'; // 默认语言为英文
+	}
+
+	// 检查是否是有效的页面路径
+	function isValidPagePath(path: string): boolean {
+		// 移除语言前缀进行检查
+		const pathWithoutLang = path.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, '/');
+		
+		// 定义有效的页面路径模式
+		const validPaths = [
+			'/', // 首页
+			'/about', // 关于页面
+			'/archive', // 归档页面
+			/^\/posts\/.+$/, // 文章页面
+			/^\/archive\/category\/.+$/, // 分类页面
+			/^\/archive\/tag\/.+$/, // 标签页面
+			/^\/\d+$/ // 分页页面
+		];
+		
+		// 检查路径是否匹配有效模式
+		return validPaths.some(pattern => {
+			if (typeof pattern === 'string') {
+				return pathWithoutLang === pattern;
+			} else {
+				return pattern.test(pathWithoutLang);
+			}
+		});
+	}
+	
+	// 检查语言偏好的函数
+	function checkLanguagePreference() {
+		const currentPath = window.location.pathname;
+		
+		// 如果是404页面或无效页面路径，不执行自动重定向
+		if (currentPath === '/404' || currentPath === '/404/' || !isValidPagePath(currentPath)) {
+			return;
+		}
+		
+		const savedLang = getCookie('preferred-language');
+		const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+		const currentLang = currentLangMatch ? currentLangMatch[1] : 'zh_cn'; // 默认语言
+		
+		let targetLang = savedLang;
+		
+		// 如果没有保存的语言偏好，检测浏览器语言
+		if (!savedLang) {
+			const browserLang = getBrowserPreferredLanguage();
+			// 只有当浏览器语言与当前语言不同时才重定向
+			if (browserLang !== currentLang) {
+				targetLang = browserLang;
+				// 保存浏览器检测到的语言偏好
+				setCookie('preferred-language', browserLang);
+			}
+		}
+		
+		// 如果有目标语言且与当前语言不同，则重定向
+		if (targetLang && targetLang !== currentLang) {
+			// 构建新的URL
+			let newPath;
+			if (targetLang === 'zh_cn') {
+				// 切换到默认语言，移除语言前缀
+				newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, '/');
+				if (newPath === '/' && currentLangMatch && currentPath !== `/${currentLangMatch[1]}` && currentPath !== `/${currentLangMatch[1]}/`) {
+					newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?/i, '');
+				}
+			} else {
+				// 切换到其他语言
+				if (currentLangMatch) {
+					// 替换现有语言前缀
+					if (currentPath === `/${currentLangMatch[1]}` || currentPath === `/${currentLangMatch[1]}/`) {
+						// 如果是语言根路径，直接返回目标语言前缀，避免尾随斜杠
+						newPath = `/${targetLang}`;
+					} else {
+						// 替换语言前缀
+						newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, `/${targetLang}/`);
+						if (newPath === `/${targetLang}/`) {
+							newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?/i, `/${targetLang}`);
+						}
+					}
+				} else {
+					// 添加语言前缀
+					if (currentPath === '/') {
+						// 如果是根路径，直接返回语言前缀，避免尾随斜杠
+						newPath = `/${targetLang}`;
+					} else {
+						newPath = `/${targetLang}${currentPath}`;
+					}
+				}
+			}
+			
+			// 使用replace保持路由记录
+			window.location.replace(newPath);
+			return;
+		}
+	}
+
+	// 更新导航菜单中语言文本的函数
+	function updateNavMenuLanguageText(lang: string) {
+		// 定义翻译映射
+		const translations = {
+			'zh_cn': '语言',
+			'en': 'Language',
+			'ja': '言語',
+			'ru': 'Язык'
+		};
+		
+		const currentTranslation = translations[lang as keyof typeof translations] || translations['zh_cn'];
+		
+		// 更新语言标题文本
+		const languageTitle = document.querySelector('#nav-menu-panel .text-black\\/50');
+		if (languageTitle) {
+			// 清除所有文本内容，保留图标
+			const icon = languageTitle.querySelector('svg');
+			languageTitle.innerHTML = '';
+			
+			// 重新添加图标和文本
+			if (icon) {
+				languageTitle.appendChild(icon);
+			}
+			languageTitle.appendChild(document.createTextNode(currentTranslation));
+		}
+	}
+
+	// 更新导航菜单中语言选择器状态的函数
+	function updateNavMenuLanguageState() {
+		const currentPath = window.location.pathname;
+		const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+		const currentLang = currentLangMatch ? currentLangMatch[1] : 'zh_cn';
+		
+		// 更新导航菜单中语言选项的激活状态
+		const langOptions = document.querySelectorAll('#nav-menu-panel a[data-lang-switch]');
+		langOptions.forEach(option => {
+			const optionLang = option.getAttribute('data-lang-switch');
+			const linkElement = option as HTMLElement;
+			
+			if (optionLang === currentLang) {
+				// 激活当前语言选项
+				linkElement.classList.add('bg-[var(--btn-plain-bg-hover)]');
+				const textDiv = linkElement.querySelector('div');
+				if (textDiv) {
+					textDiv.classList.remove('text-black/60', 'dark:text-white/60', 'group-hover:text-[var(--primary)]', 'group-active:text-[var(--primary)]');
+					textDiv.classList.add('text-[var(--primary)]');
+				}
+				// 如果图标不存在，创建并添加图标
+				let checkIcon = linkElement.querySelector('svg');
+				if (!checkIcon) {
+					// 创建图标元素
+					checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+					checkIcon.setAttribute('class', 'text-[1rem] text-[var(--primary)]');
+					checkIcon.setAttribute('width', '1em');
+					checkIcon.setAttribute('height', '1em');
+					checkIcon.setAttribute('viewBox', '0 0 24 24');
+					checkIcon.innerHTML = '<path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19L21 7l-1.41-1.41z"/>';
+					linkElement.appendChild(checkIcon);
+				}
+			} else {
+				// 取消激活其他语言选项
+				linkElement.classList.remove('bg-[var(--btn-plain-bg-hover)]');
+				const textDiv = linkElement.querySelector('div');
+				if (textDiv) {
+					textDiv.classList.remove('text-[var(--primary)]');
+					textDiv.classList.add('text-black/60', 'dark:text-white/60', 'group-hover:text-[var(--primary)]', 'group-active:text-[var(--primary)]');
+				}
+				// 移除选中图标
+				const checkIcon = linkElement.querySelector('svg');
+				if (checkIcon) {
+					checkIcon.remove();
+				}
+			}
+		});
+	}
+	
+	// 页面加载时更新状态
+	document.addEventListener('DOMContentLoaded', () => {
+		checkLanguagePreference();
+		updateNavMenuLanguageState();
+	});
+	
+	// 监听语言变化事件，更新UI状态
+	window.addEventListener('languageChanged', (event: any) => {
+		if (event.detail && event.detail.lang) {
+			updateNavMenuLanguageText(event.detail.lang);
+			updateNavMenuLanguageState();
+		}
+	});
+	
+	// 处理移动端菜单的语言切换
+	document.addEventListener('click', async (e) => {
+		const target = e.target as HTMLElement;
+		const langLink = target.closest('a[data-lang-switch]') as HTMLAnchorElement;
+		
+		if (langLink) {
+			e.preventDefault();
+			
+			const href = langLink.getAttribute('href');
+			const selectedLang = langLink.getAttribute('data-lang-switch');
+			
+			if (href && selectedLang) {
+				// 保存语言偏好到cookie
+				setCookie('preferred-language', selectedLang);
+				
+				// 触发语言变化事件
+				window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: selectedLang } }));
+				
+				// 检查目标URL是否存在
+				async function checkUrlExists(url: string): Promise<boolean> {
+					try {
+						const response = await fetch(url, { method: 'HEAD' });
+						return response.ok;
+					} catch {
+						return false;
+					}
+				}
+				
+				// 获取回退URL的函数
+				function getFallbackUrl(targetLang: string, currentUrl: string): string {
+				if (currentUrl.includes('/posts/')) {
+					return targetLang === 'zh_cn' ? '/archive' : `/${targetLang}/archive`;
+				} else if (currentUrl.includes('/archive/category/') || currentUrl.includes('/archive/tag/')) {
+					return targetLang === 'zh_cn' ? '/archive' : `/${targetLang}/archive`;
+				} else if (currentUrl.includes('/about')) {
+					return targetLang === 'zh_cn' ? '/about' : `/${targetLang}/about`;
+				} else if (currentUrl.includes('/archive')) {
+					return targetLang === 'zh_cn' ? '/archive' : `/${targetLang}/archive`;
+				} else {
+					return targetLang === 'zh_cn' ? '/' : `/${targetLang}`;
+				}
+			}
+				
+				// 获取当前页面路径
+				const currentPath = window.location.pathname;
+				
+				// 动态生成目标URL，而不是使用预生成的href
+				let targetUrl = href;
+				
+				// 对于特殊页面，直接生成正确的目标URL
+				if (currentPath.includes('/about')) {
+					targetUrl = selectedLang === 'zh_cn' ? '/about' : `/${selectedLang}/about`;
+				} else if (currentPath.includes('/archive')) {
+					targetUrl = selectedLang === 'zh_cn' ? '/archive' : `/${selectedLang}/archive`;
+				}
+				
+				const urlExists = await checkUrlExists(targetUrl);
+				
+				if (urlExists) {
+					// 目标页面存在，使用Swup导航避免页面重载
+					if (window.swup) {
+						window.swup.navigate(targetUrl);
+					} else {
+						// 降级方案：如果Swup不可用，使用传统跳转
+						window.location.replace(targetUrl);
+					}
+				} else {
+					// 目标页面不存在，使用回退URL
+					const fallbackUrl = getFallbackUrl(selectedLang, currentPath);
+					if (window.swup) {
+						window.swup.navigate(fallbackUrl);
+					} else {
+						// 降级方案：如果Swup不可用，使用传统跳转
+						window.location.replace(fallbackUrl);
+					}
+				}
+			}
+		}
+	});
+</script>

@@ -1,0 +1,226 @@
+---
+import { Icon } from "astro-icon/components";
+import { navBarConfig, siteConfig } from "../config";
+import { getLinkPresets } from "../constants/link-presets";
+import { LinkPreset, type NavBarLink } from "../types/config";
+import { getArchiveUrlWithLang, getHomeUrlWithLang } from "../utils/i18n-utils";
+import { url } from "../utils/url-utils";
+import GlobalLanguageSwitcher from "./GlobalLanguageSwitcher.astro";
+import LightDarkSwitch from "./LightDarkSwitch.svelte";
+import Search from "./Search.svelte";
+import DisplaySettings from "./widget/DisplaySettings.svelte";
+import NavMenuPanel from "./widget/NavMenuPanel.astro";
+
+const className = Astro.props.class;
+const lang = Astro.props.lang;
+
+// 根据当前语言获取链接预设
+const linkPresets = getLinkPresets(lang);
+
+let links: NavBarLink[] = navBarConfig.links.map(
+	(item: NavBarLink | LinkPreset): NavBarLink => {
+		if (typeof item === "number") {
+			return linkPresets[item];
+		}
+		return item;
+	},
+);
+---
+<div id="navbar" class="z-50 onload-animation">
+    <div class="absolute h-8 left-0 right-0 -top-8 bg-[var(--card-bg)] transition"></div> <!-- used for onload animation -->
+    <div class:list={[
+        className,
+        "card-base !overflow-visible max-w-[var(--page-width)] h-[4.5rem] mx-auto flex items-center justify-between px-4"]}>
+        <a href={getHomeUrlWithLang(lang)} class="btn-plain scale-animation h-[3.25rem] px-5 font-bold active:scale-95">
+            <div class="flex flex-row text-[var(--primary)] items-center text-md">
+
+                {siteConfig.subtitle}
+            </div>
+        </a>
+        <div class="hidden md:flex">
+            {links.map((l) => {
+                return <a aria-label={l.name} href={l.external ? l.url : url(l.url)} target={l.external ? "_blank" : null}
+                          class="btn-plain scale-animation h-11 font-bold px-5 active:scale-95"
+                >
+                    <div class="flex items-center">
+                        {l.name}
+                        {l.external && <Icon name="fa6-solid:arrow-up-right-from-square" class="text-[0.875rem] transition -translate-y-[1px] ml-1 text-black/[0.2] dark:text-white/[0.2]"></Icon>}
+                    </div>
+                </a>;
+            })}
+        </div>
+        <div class="flex items-center">
+            <!--<SearchPanel client:load>-->
+            <Search client:only="svelte"></Search>
+            <div class="hidden md:block">
+                <GlobalLanguageSwitcher currentUrl={Astro.url.pathname} />
+            </div>
+            {!siteConfig.themeColor.fixed && (
+                    <button aria-label="Display Settings" class="btn-plain scale-animation h-11 w-11 active:scale-90" id="display-settings-switch">
+                        <Icon name="material-symbols:palette-outline" class="text-[1.25rem]"></Icon>
+                    </button>
+            )}
+            <LightDarkSwitch client:only="svelte"></LightDarkSwitch>
+            <button aria-label="Menu" class="btn-plain scale-animation w-11 h-11 active:scale-90 md:!hidden" id="nav-menu-switch">
+                <Icon name="material-symbols:menu-rounded" class="text-[1.25rem]"></Icon>
+            </button>
+        </div>
+        <NavMenuPanel links={links}></NavMenuPanel>
+        <DisplaySettings client:only="svelte"></DisplaySettings>
+    </div>
+</div>
+
+<script>
+function switchTheme() {
+    if (localStorage.theme === 'dark') {
+        document.documentElement.classList.remove('dark');
+        localStorage.theme = 'light';
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.theme = 'dark';
+    }
+}
+
+// 更新导航栏文字内容的函数
+function updateNavbarText(lang: string) {
+    // 定义翻译映射
+    const translations = {
+        'zh_cn': {
+            'home': '主页',
+            'about': '关于',
+            'archive': '归档'
+        },
+        'en': {
+            'home': 'Home',
+            'about': 'About',
+            'archive': 'Archive'
+        },
+        'ja': {
+            'home': 'ホーム',
+            'about': 'について',
+            'archive': 'アーカイブ'
+        },
+        'ru': {
+            'home': 'Главная',
+            'about': 'О нас',
+            'archive': 'Архив'
+        }
+    };
+    
+    const currentTranslations = translations[lang as keyof typeof translations] || translations['zh_cn'];
+    
+    // 更新导航链接文字
+    const navLinks = document.querySelectorAll('#navbar .hidden.md\\:flex a');
+    
+    navLinks.forEach((link, index) => {
+        const textElement = link.querySelector('div');
+        if (textElement && textElement.firstChild) {
+            const currentText = textElement.firstChild?.textContent?.trim();
+            
+            // 根据当前文字内容判断应该更新为什么
+            if (currentText === '主页' || currentText === 'Home' || currentText === 'ホーム' || currentText === 'Главная') {
+                textElement.firstChild.textContent = currentTranslations['home'];
+                // 更新链接
+                if (lang === 'zh_cn') {
+                    (link as HTMLAnchorElement).href = '/';
+                } else {
+                    (link as HTMLAnchorElement).href = `/${lang}/`;
+                }
+            } else if (currentText === '关于' || currentText === 'About' || currentText === 'について' || currentText === 'О нас') {
+                textElement.firstChild.textContent = currentTranslations['about'];
+                // 更新链接
+                if (lang === 'zh_cn') {
+                    (link as HTMLAnchorElement).href = '/about';
+                } else {
+                    (link as HTMLAnchorElement).href = `/${lang}/about`;
+                }
+            } else if (currentText === '归档' || currentText === 'Archive' || currentText === 'アーカイブ' || currentText === 'Архив') {
+                textElement.firstChild.textContent = currentTranslations['archive'];
+                // 更新链接
+                if (lang === 'zh_cn') {
+                    (link as HTMLAnchorElement).href = '/archive';
+                } else {
+                    (link as HTMLAnchorElement).href = `/${lang}/archive`;
+                }
+            }
+        }
+    });
+}
+
+function loadButtonScript() {
+    let switchBtn = document.getElementById("scheme-switch");
+    if (switchBtn) {
+        switchBtn.onclick = function () {
+            switchTheme()
+        };
+    }
+
+    let settingBtn = document.getElementById("display-settings-switch");
+    if (settingBtn) {
+        settingBtn.onclick = function () {
+            let settingPanel = document.getElementById("display-setting");
+            if (settingPanel) {
+                settingPanel.classList.toggle("float-panel-closed");
+            }
+        };
+    }
+
+    let menuBtn = document.getElementById("nav-menu-switch");
+    if (menuBtn) {
+        menuBtn.onclick = function () {
+            let menuPanel = document.getElementById("nav-menu-panel");
+            if (menuPanel) {
+                menuPanel.classList.toggle("float-panel-closed");
+            }
+        };
+    }
+}
+
+// 监听语言变化事件
+function setupLanguageListener() {
+    window.addEventListener('languageChanged', (event: any) => {
+        if (event.detail && event.detail.lang) {
+            updateNavbarText(event.detail.lang);
+        }
+    });
+}
+
+loadButtonScript();
+setupLanguageListener();
+</script>
+
+{import.meta.env.PROD && <script is:inline define:vars={{scriptUrl: url('/pagefind/pagefind.js')}}>
+async function loadPagefind() {
+    try {
+        const response = await fetch(scriptUrl, { method: 'HEAD' });
+        if (!response.ok) {
+            throw new Error(`Pagefind script not found: ${response.status}`);
+        }
+
+        const pagefind = await import(scriptUrl);
+
+        await pagefind.options({
+            excerptLength: 20
+        });
+
+        window.pagefind = pagefind;
+
+        document.dispatchEvent(new CustomEvent('pagefindready'));
+        console.log('Pagefind loaded and initialized successfully, event dispatched.');
+    } catch (error) {
+        console.error('Failed to load Pagefind:', error);
+        window.pagefind = {
+            search: () => Promise.resolve({ results: [] }),
+            options: () => Promise.resolve(),
+        };
+        document.dispatchEvent(new CustomEvent('pagefindloaderror'));
+        console.log('Pagefind load error, event dispatched.');
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadPagefind);
+} else {
+    loadPagefind();
+}
+</script>}

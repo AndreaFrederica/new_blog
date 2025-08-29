@@ -1,0 +1,63 @@
+---
+import { getEntry, render } from "astro:content";
+import Markdown from "@components/misc/Markdown.astro";
+import MainGridLayout from "../../layouts/MainGridLayout.astro";
+import { profileConfig, siteConfig } from "../../config";
+import { isSupportedLanguage } from "@utils/i18n-utils";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
+
+export async function getStaticPaths() {
+	const supportedLangs = siteConfig.supportedLangs || ["en"];
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	
+	return supportedLangs
+		.filter(lang => lang !== defaultLang) // 默认语言使用根路径
+		.map(lang => ({
+			params: { lang },
+			props: { lang }
+		}));
+}
+
+const { lang } = Astro.props;
+const { lang: langParam } = Astro.params;
+
+// 验证语言参数
+if (!isSupportedLanguage(langParam)) {
+	return Astro.redirect('/404');
+}
+
+// 获取对应语言的about内容
+let aboutPost: any;
+try {
+	// 首先尝试获取对应语言的about文件 (文件名格式: about_en.md -> id: about_en)
+	aboutPost = await getEntry("spec", `about_${langParam}`);
+	// 如果没有找到，则使用默认的about文件
+	if (!aboutPost) {
+		aboutPost = await getEntry("spec", "about");
+	}
+} catch (error) {
+	// 如果都没有找到，使用默认的about文件
+	try {
+		aboutPost = await getEntry("spec", "about");
+	} catch (fallbackError) {
+		console.error('Failed to load about content:', fallbackError);
+	}
+}
+
+let Content: any = null;
+if (aboutPost) {
+	const rendered = await render(aboutPost);
+	Content = rendered.Content;
+}
+---
+
+<MainGridLayout title={i18n(I18nKey.about, langParam)} description={i18n(I18nKey.about, langParam)} lang={langParam}>
+    <div class="flex w-full overflow-hidden relative min-h-32">
+        <div class="card-base z-10 px-9 py-6 relative w-full ">
+            <Markdown class="mt-2">
+                {Content && <Content />}
+            </Markdown>
+        </div>
+    </div>
+</MainGridLayout>

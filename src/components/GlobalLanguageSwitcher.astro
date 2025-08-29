@@ -1,0 +1,461 @@
+---
+import {
+	getFallbackUrl,
+	getLanguageName,
+	getLanguageSwitchUrl,
+	isDefaultLanguage,
+} from "@utils/i18n-utils";
+import { Icon } from "astro-icon/components";
+import { siteConfig } from "@/config";
+
+// 将支持的语言列表传递给客户端脚本
+const supportedLangsJson = JSON.stringify(
+	siteConfig.supportedLangs || ["zh_cn", "en"],
+);
+
+interface Props {
+	currentUrl?: string;
+}
+
+const { currentUrl } = Astro.props;
+const currentPath = currentUrl || Astro.url.pathname;
+
+// 从URL中提取当前语言
+function getCurrentLanguage(path: string): string {
+	const match = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+	if (match && siteConfig.supportedLangs?.includes(match[1])) {
+		return match[1];
+	}
+	return siteConfig.defaultLang || "zh_cn";
+}
+
+const currentLang = getCurrentLanguage(currentPath);
+const supportedLangs = siteConfig.supportedLangs || ["zh_cn", "en"];
+
+// 如果只有一种语言或者禁用了语言切换器，不显示
+const shouldShow = siteConfig.showLanguageSwitcher && supportedLangs.length > 1;
+---
+
+<!-- 隐藏的数据元素，用于传递支持的语言列表给客户端脚本 -->
+<script type="application/json" id="supported-langs-data" style="display: none;">{supportedLangsJson}</script>
+
+{shouldShow && (
+	<div class="relative z-50" role="menu" tabindex="-1" id="global-language-switcher">
+		<button 
+			aria-label="Language Switcher" 
+			role="menuitem" 
+			class="btn-plain scale-animation h-11 px-3 active:scale-90 flex items-center gap-1" 
+			id="lang-trigger"
+		>
+			<Icon name="material-symbols:language" class="text-[1.25rem]" />
+			<span class="lang-text text-sm font-medium hidden sm:inline">{getLanguageName(currentLang)}</span>
+			<Icon name="material-symbols:keyboard-arrow-down" class="text-[1rem] hidden sm:inline" />
+		</button>
+		<div 
+			id="lang-dropdown" 
+			class="hidden absolute transition float-panel-closed top-11 -right-2 pt-5"
+		>
+			<div class="card-base float-panel p-2 min-w-[140px]">
+				{supportedLangs.map(lang => {
+					const isActive = lang === currentLang;
+					const url = getLanguageSwitchUrl(currentPath, lang);
+					return (
+						<a 
+							href={url}
+							class:list={[
+								"btn-plain scale-animation h-10 px-4 w-full justify-start active:scale-95 text-base whitespace-nowrap min-w-[120px]",
+								{ "text-[var(--primary)] font-medium": isActive }
+							]}
+							title={`切换到${getLanguageName(lang)}`}
+							role="menuitem"
+						>
+							{getLanguageName(lang)}
+						</a>
+					);
+				})}
+			</div>
+		</div>
+	</div>
+)}
+
+
+
+<script>
+	// Cookie 工具函数
+	function setCookie(name: string, value: string, days: number = 365) {
+		const expires = new Date();
+		expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+		document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+	}
+
+	function getCookie(name: string): string | null {
+		const nameEQ = name + "=";
+		const ca = document.cookie.split(';');
+		for (let i = 0; i < ca.length; i++) {
+			let c = ca[i];
+			while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+			if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+		}
+		return null;
+	}
+
+	// 显示和隐藏面板的函数
+	function showPanel() {
+		const panel = document.querySelector("#lang-dropdown");
+		if (panel) {
+			panel.classList.remove("hidden");
+			panel.classList.remove("float-panel-closed");
+		}
+	}
+
+	function hidePanel() {
+		const panel = document.querySelector("#lang-dropdown");
+		if (panel) {
+			panel.classList.add("float-panel-closed");
+			// 延迟添加hidden类，让动画完成
+			setTimeout(() => {
+				panel.classList.add("hidden");
+			}, 150);
+		}
+	}
+
+	// 获取浏览器首选语言的函数
+	function getBrowserPreferredLanguage(): string {
+		let supportedLangs: string[];
+		try {
+			const dataElement = document.getElementById('supported-langs-data');
+			const textContent = dataElement?.textContent?.trim();
+			if (textContent && textContent !== '') {
+				supportedLangs = JSON.parse(textContent);
+			} else {
+				supportedLangs = ['zh_cn', 'en'];
+			}
+		} catch (error) {
+			console.warn('Failed to parse supported languages data, using default:', error);
+			supportedLangs = ['zh_cn', 'en'];
+		}
+		const browserLangs = navigator.languages || [navigator.language];
+		
+		for (const browserLang of browserLangs) {
+			const normalizedLang = browserLang.toLowerCase().replace('-', '_');
+			
+			// 繁体中文（港澳台）映射到简体中文
+			if (normalizedLang === 'zh_tw' || normalizedLang === 'zh_hk' || normalizedLang === 'zh_mo') {
+				return 'zh_cn';
+			}
+			
+			if (supportedLangs.includes(normalizedLang)) {
+				return normalizedLang;
+			}
+			// 尝试匹配语言的主要部分（如 en-US -> en）
+			const mainLang = normalizedLang.split('_')[0];
+			if (supportedLangs.includes(mainLang)) {
+				return mainLang;
+			}
+		}
+		
+		return 'en'; // 默认语言改为英文
+	}
+
+	// 检查是否是有效的页面路径
+	function isValidPagePath(path: string): boolean {
+		// 移除语言前缀进行检查
+		const pathWithoutLang = path.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, '/');
+		
+		// 定义有效的页面路径模式
+		const validPaths = [
+			'/', // 首页
+			'/about', // 关于页面
+			'/archive', // 归档页面
+			/^\/posts\/.+$/, // 文章页面
+			/^\/archive\/category\/.+$/, // 分类页面
+			/^\/archive\/tag\/.+$/, // 标签页面
+			/^\/\d+$/ // 分页页面
+		];
+		
+		// 检查路径是否匹配有效模式
+		return validPaths.some(pattern => {
+			if (typeof pattern === 'string') {
+				return pathWithoutLang === pattern;
+			} else {
+				return pattern.test(pathWithoutLang);
+			}
+		});
+	}
+	
+	// 检查语言偏好的函数
+	function checkLanguagePreference() {
+		const currentPath = window.location.pathname;
+		
+		// 如果是404页面或无效页面路径，不执行自动重定向
+		if (currentPath === '/404' || currentPath === '/404/' || !isValidPagePath(currentPath)) {
+			return;
+		}
+		
+		const savedLang = getCookie('preferred-language');
+		const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+		const currentLang = currentLangMatch ? currentLangMatch[1] : 'zh_cn'; // 默认语言
+		
+		let targetLang = savedLang;
+		
+		// 如果没有保存的语言偏好，检测浏览器语言
+		if (!savedLang) {
+			const browserLang = getBrowserPreferredLanguage();
+			// 只有当浏览器语言与当前语言不同时才重定向
+			if (browserLang !== currentLang) {
+				targetLang = browserLang;
+				// 保存浏览器检测到的语言偏好
+				setCookie('preferred-language', browserLang);
+			}
+		}
+		
+		// 如果有目标语言且与当前语言不同，则重定向
+		if (targetLang && targetLang !== currentLang) {
+			// 构建新的URL
+			let newPath;
+			if (targetLang === 'zh_cn') {
+				// 切换到默认语言，移除语言前缀
+				newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, '/');
+				if (newPath === '/' && currentLangMatch && currentPath !== `/${currentLangMatch[1]}` && currentPath !== `/${currentLangMatch[1]}/`) {
+					newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?/i, '');
+				}
+			} else {
+				// 切换到其他语言
+				if (currentLangMatch) {
+					// 替换现有语言前缀
+					if (currentPath === `/${currentLangMatch[1]}` || currentPath === `/${currentLangMatch[1]}/`) {
+						// 如果是语言根路径，直接返回目标语言前缀，避免尾随斜杠
+						newPath = `/${targetLang}`;
+					} else {
+						// 替换语言前缀
+						newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?(?:\/|$)/i, `/${targetLang}/`);
+						if (newPath === `/${targetLang}/`) {
+							newPath = currentPath.replace(/^\/[a-z]{2}(?:_[a-z]{2})?/i, `/${targetLang}`);
+						}
+					}
+				} else {
+					// 添加语言前缀
+					if (currentPath === '/') {
+						// 如果是根路径，直接返回语言前缀，避免尾随斜杠
+						newPath = `/${targetLang}`;
+					} else {
+						newPath = `/${targetLang}${currentPath}`;
+					}
+				}
+			}
+			
+			// 使用replace保持路由记录
+			window.location.replace(newPath);
+			return;
+		}
+	}
+
+	// 更新下拉框显示状态的函数
+	function updateDropdownState() {
+		const currentPath = window.location.pathname;
+		const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+		const currentLang = currentLangMatch ? currentLangMatch[1] : 'zh_cn';
+		
+		// 更新触发按钮显示的语言
+		const langTrigger = document.getElementById('lang-trigger');
+		if (langTrigger) {
+			const langText = langTrigger.querySelector('.lang-text');
+			if (langText) {
+				// 根据当前语言更新显示文本
+				const langNames: { [key: string]: string } = {
+					'zh_cn': '中文',
+					'en': 'English',
+					'ja': '日本語',
+					'ru': 'Русский'
+				};
+				langText.textContent = langNames[currentLang] || '中文';
+			}
+		}
+		
+		// 更新下拉选项的激活状态
+		const langOptions = document.querySelectorAll('#lang-dropdown a');
+		langOptions.forEach(option => {
+			const optionLang = option.getAttribute('href')?.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i)?.[1] || 'zh_cn';
+			if (optionLang === 'zh_cn' && option.getAttribute('href') === '/') {
+				// 处理默认语言的根路径情况
+				if (currentLang === 'zh_cn') {
+					option.classList.add('active-lang');
+				} else {
+					option.classList.remove('active-lang');
+				}
+			} else if (optionLang === currentLang) {
+				option.classList.add('active-lang');
+			} else {
+				option.classList.remove('active-lang');
+			}
+		});
+	}
+	
+	// 页面加载时检查语言偏好并设置事件监听器
+	document.addEventListener('DOMContentLoaded', () => {
+		checkLanguagePreference();
+		updateDropdownState();
+		
+		const langTrigger = document.getElementById('lang-trigger');
+		const langSwitcher = document.getElementById('global-language-switcher');
+		const langDropdown = document.getElementById('lang-dropdown');
+		
+		if (langTrigger && langSwitcher && langDropdown) {
+			// 检测是否为触摸设备
+			const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+			
+			if (isTouchDevice) {
+				// 移动设备：使用点击事件
+				langTrigger.addEventListener('click', (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					const isVisible = !langDropdown.classList.contains('hidden');
+					if (isVisible) {
+						hidePanel();
+					} else {
+						showPanel();
+					}
+				});
+				
+				// 点击其他地方关闭面板
+				document.addEventListener('click', (e) => {
+					if (!langSwitcher.contains(e.target as Node)) {
+						hidePanel();
+					}
+				});
+			} else {
+				// 桌面设备：使用鼠标悬停事件
+				langTrigger.addEventListener('mouseenter', showPanel);
+				langSwitcher.addEventListener('mouseleave', hidePanel);
+			}
+		}
+	});
+	
+	// 监听语言变化事件，更新UI状态
+	window.addEventListener('languageChanged', () => {
+		updateDropdownState();
+	});
+	
+	// 检查URL是否存在的函数
+	async function checkUrlExists(url: string): Promise<boolean> {
+		try {
+			const response = await fetch(url, { method: 'HEAD' });
+			return response.ok;
+		} catch {
+			return false;
+		}
+	}
+
+	// 获取回退URL的函数
+	function getFallbackUrl(targetLang: string, currentUrl: string): string {
+		// 检查当前URL类型并提供相应的回退
+		if (currentUrl.includes('/posts/')) {
+			// 文章页面回退到归档页面
+			if (targetLang === 'zh_cn') {
+				return '/archive';
+			}
+			return `/${targetLang}/archive`;
+		} else if (currentUrl.includes('/archive/category/')) {
+			// 分类页面回退到归档页面
+			if (targetLang === 'zh_cn') {
+				return '/archive';
+			}
+			return `/${targetLang}/archive`;
+		} else if (currentUrl.includes('/archive/tag/')) {
+			// 标签页面回退到归档页面
+			if (targetLang === 'zh_cn') {
+				return '/archive';
+			}
+			return `/${targetLang}/archive`;
+		} else if (currentUrl.includes('/about')) {
+			// 关于页面保持在关于页面
+			if (targetLang === 'zh_cn') {
+				return '/about';
+			}
+			return `/${targetLang}/about`;
+		} else if (currentUrl.includes('/archive')) {
+			// 归档页面保持在归档页面
+			if (targetLang === 'zh_cn') {
+				return '/archive';
+			}
+			return `/${targetLang}/archive`;
+		} else {
+			// 其他页面回退到首页
+			if (targetLang === 'zh_cn') {
+				return '/';
+			}
+			return `/${targetLang}`;
+		}
+	}
+
+	// 处理语言切换点击事件
+	document.addEventListener('click', async (e) => {
+		const target = e.target as HTMLElement;
+		const langDropdown = document.getElementById('lang-dropdown');
+		
+		// 如果点击的是语言选项链接
+		if (target.tagName === 'A' && langDropdown && langDropdown.contains(target)) {
+			e.preventDefault();
+			
+			const href = target.getAttribute('href');
+			if (href) {
+				// 从URL中提取语言
+				const langMatch = href.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+				const selectedLang = langMatch ? langMatch[1] : 'zh_cn';
+				
+				// 保存语言偏好到cookie
+				setCookie('preferred-language', selectedLang);
+				
+				// 触发语言变化事件
+				window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: selectedLang } }));
+				
+				// 先隐藏下拉面板
+				hidePanel();
+				
+				// 获取当前页面路径
+				const currentPath = window.location.pathname;
+				
+				// 动态生成目标URL，而不是使用预生成的href
+				let targetUrl = href;
+				
+				// 对于特殊页面，直接生成正确的目标URL
+				if (currentPath.includes('/about')) {
+					targetUrl = selectedLang === 'zh_cn' ? '/about' : `/${selectedLang}/about`;
+				} else if (currentPath.includes('/archive')) {
+					targetUrl = selectedLang === 'zh_cn' ? '/archive' : `/${selectedLang}/archive`;
+				}
+				
+				// 检查目标URL是否存在
+				const urlExists = await checkUrlExists(targetUrl);
+				
+				if (urlExists) {
+					// 目标页面存在，使用Swup导航避免页面重载
+					if (window.swup) {
+						window.swup.navigate(targetUrl);
+					} else {
+						// 降级方案：如果Swup不可用，使用传统跳转
+						window.location.replace(targetUrl);
+					}
+				} else {
+					// 目标页面不存在，使用回退URL
+					const fallbackUrl = getFallbackUrl(selectedLang, currentPath);
+					if (window.swup) {
+						window.swup.navigate(fallbackUrl);
+					} else {
+						// 降级方案：如果Swup不可用，使用传统跳转
+						window.location.replace(fallbackUrl);
+					}
+				}
+			}
+			return;
+		}
+	});
+</script>
+
+<style>
+	.active-lang {
+		color: var(--primary) !important;
+		font-weight: 500 !important;
+		background-color: var(--btn-plain-bg-hover) !important;
+	}
+</style>

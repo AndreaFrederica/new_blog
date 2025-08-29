@@ -1,0 +1,76 @@
+---
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
+import { getCategoryList } from "../../utils/content-utils";
+import { getCategoryUrlWithLang } from "../../utils/i18n-utils";
+import ButtonLink from "../control/ButtonLink.astro";
+import WidgetLayout from "./WidgetLayout.astro";
+
+interface Props {
+	class?: string;
+	style?: string;
+	lang?: string;
+}
+const className = Astro.props.class;
+const style = Astro.props.style;
+const lang = Astro.props.lang;
+
+const categories = await getCategoryList(lang);
+
+const COLLAPSED_HEIGHT = "7.5rem";
+const COLLAPSE_THRESHOLD = 5;
+
+const isCollapsed = categories.length >= COLLAPSE_THRESHOLD;
+---
+
+<WidgetLayout name={i18n(I18nKey.categories, lang)} id="categories" isCollapsed={isCollapsed} collapsedHeight={COLLAPSED_HEIGHT}
+                class={className} style={style}
+>
+    {categories.map((c) =>
+        <ButtonLink
+            url={getCategoryUrlWithLang(c.name, lang)}
+            badge={String(c.count)}
+            label={`View all posts in the ${c.name.trim()} category`}
+        >
+            {c.name.trim()}
+        </ButtonLink>
+    )}
+</WidgetLayout>
+
+<script>
+// 更新分类控件标题的函数
+function updateCategoriesTitle(lang: string) {
+    // 定义翻译映射
+    const translations = {
+        'zh_cn': '分类',
+        'en': 'Categories',
+        'ja': 'カテゴリー',
+        'ru': 'Категории'
+    };
+    
+    const currentTranslation = translations[lang as keyof typeof translations] || translations['zh_cn'];
+    
+    // 更新分类控件的标题
+    const categoriesWidget = document.querySelector('widget-layout[data-id="categories"]');
+    if (categoriesWidget) {
+        const titleElement = categoriesWidget.querySelector('div.font-bold');
+        if (titleElement) {
+            titleElement.textContent = currentTranslation;
+        }
+    }
+}
+
+// 监听语言变化事件
+function setupCategoriesLanguageListener() {
+    window.addEventListener('languageChanged', (event: any) => {
+        if (event.detail && event.detail.lang) {
+            updateCategoriesTitle(event.detail.lang);
+        }
+    });
+}
+
+// 页面加载时设置监听器
+document.addEventListener('DOMContentLoaded', () => {
+    setupCategoriesLanguageListener();
+});
+</script>

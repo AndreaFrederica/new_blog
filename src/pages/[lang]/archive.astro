@@ -1,0 +1,46 @@
+---
+import ArchivePanel from "../../components/ArchivePanel.svelte";
+import MainGridLayout from "../../layouts/MainGridLayout.astro";
+import { getSortedPostsByLanguage } from "../../utils/content-utils";
+import { siteConfig } from "../../config";
+import { isSupportedLanguage } from "@utils/i18n-utils";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
+
+export async function getStaticPaths() {
+	const supportedLangs = siteConfig.supportedLangs || ["en"];
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	
+	const paths = [];
+	
+	for (const lang of supportedLangs) {
+		if (lang === defaultLang) continue; // 默认语言使用根路径
+		
+		// 获取该语言的文章
+		const posts = await getSortedPostsByLanguage(lang);
+		
+		paths.push({
+			params: { lang },
+			props: { lang, posts }
+		});
+	}
+	
+	return paths;
+}
+
+const { lang, posts } = Astro.props;
+const { lang: langParam } = Astro.params;
+
+// 验证语言参数
+if (!isSupportedLanguage(langParam)) {
+	return Astro.redirect('/404');
+}
+---
+
+<MainGridLayout title={i18n(I18nKey.archive, langParam)} description={i18n(I18nKey.archive, langParam)} lang={langParam}>
+    <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative">
+        <div class="card-base z-10 px-6 md:px-9 py-8 relative w-full">
+            <ArchivePanel sortedPosts={posts} lang={langParam} client:load />
+        </div>
+    </div>
+</MainGridLayout>

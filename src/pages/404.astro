@@ -1,0 +1,152 @@
+---
+import { siteConfig } from "../config";
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+
+// 使用默认语言作为服务端渲染的初始值
+const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+---
+
+<MainGridLayout 
+    title={i18n(I18nKey.notFoundTitle, defaultLang)} 
+    description={i18n(I18nKey.notFoundDescription, defaultLang)} 
+    lang={defaultLang}
+>
+    <div class="notfound-page flex w-full overflow-hidden relative min-h-32">
+        <div class="card-base z-10 px-9 py-6 relative w-full text-center">
+            <div class="mt-2">
+                <h1 class="text-6xl font-bold text-gray-600 dark:text-gray-300 mb-4" id="error-code">
+                    {i18n(I18nKey.notFound, defaultLang)}
+                </h1>
+                <h2 class="text-gray-600 dark:text-gray-300 text-2xl font-semibold mb-4" id="error-title">
+                    {i18n(I18nKey.notFoundTitle, defaultLang)}
+                </h2>
+                <p class="text-gray-600 dark:text-gray-300 mb-4" id="error-description">
+                    {i18n(I18nKey.notFoundDescription, defaultLang)}
+                </p>
+                <div class="text-gray-600 dark:text-gray-300 text-sm mb-8 font-mono bg-gray-100 dark:bg-gray-800 px-4 py-2 inline-block">
+                    <span class="" id="path-label">{i18n(I18nKey.currentPath, defaultLang)}:</span>
+                    <span id="current-path"></span>
+                </div>
+                <a 
+                    href="/" 
+                    class=" btn-plain px-6 py-3 scale-animation active:scale-95 "
+                    id="back-home-btn"
+                >
+                    {i18n(I18nKey.backToHome, defaultLang)}
+                </a>
+            </div>
+        </div>
+    </div>
+</MainGridLayout>
+
+<script>
+    import { siteConfig } from "../config";
+    import I18nKey from "../i18n/i18nKey";
+    import { i18n } from "../i18n/translation";
+
+    // 从Cookie中获取语言偏好
+    function getLanguageFromCookie(): string | null {
+        const nameEQ = "preferred-language=";
+        const ca = document.cookie.split(";");
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === " ") c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+        }
+        return null;
+    }
+
+    // 获取浏览器首选语言
+    function getBrowserPreferredLanguage(): string {
+        const supportedLangs = siteConfig.supportedLangs || ["zh_cn", "en"];
+        const browserLangs = navigator.languages || [navigator.language];
+        
+        for (const browserLang of browserLangs) {
+            const normalizedLang = browserLang.toLowerCase().replace("-", "_");
+            if (supportedLangs.includes(normalizedLang)) {
+                return normalizedLang;
+            }
+            // 尝试匹配语言的主要部分（如 en-US -> en）
+            const mainLang = normalizedLang.split("_")[0];
+            if (supportedLangs.includes(mainLang)) {
+                return mainLang;
+            }
+        }
+        
+        return siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    }
+
+    // 获取当前应该使用的语言
+    function getCurrentLanguage(): string {
+        // 优先使用Cookie中的语言
+        const cookieLang = getLanguageFromCookie();
+        if (cookieLang) {
+            return cookieLang;
+        }
+        
+        // 其次使用浏览器语言
+        return getBrowserPreferredLanguage();
+    }
+
+    // 更新页面内容
+    function updatePageContent(lang: string) {
+        const errorCode = document.getElementById("error-code");
+        const errorTitle = document.getElementById("error-title");
+        const errorDescription = document.getElementById("error-description");
+        const backHomeBtn = document.getElementById("back-home-btn");
+
+        if (errorCode) {
+            errorCode.textContent = i18n(I18nKey.notFound, lang);
+        }
+        if (errorTitle) {
+            errorTitle.textContent = i18n(I18nKey.notFoundTitle, lang);
+        }
+        if (errorDescription) {
+            errorDescription.textContent = i18n(I18nKey.notFoundDescription, lang);
+        }
+        if (backHomeBtn) {
+            backHomeBtn.textContent = i18n(I18nKey.backToHome, lang);
+            // 更新返回首页的链接
+            if (lang === (siteConfig.defaultLang || siteConfig.lang || "zh_cn")) {
+                backHomeBtn.setAttribute("href", "/");
+            } else {
+                backHomeBtn.setAttribute("href", `/${lang}/`);
+            }
+        }
+
+        // 更新路径标签
+        updatePathLabel(lang);
+
+        // 更新页面标题和描述
+        document.title = i18n(I18nKey.notFoundTitle, lang);
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute("content", i18n(I18nKey.notFoundDescription, lang));
+        }
+    }
+
+    // 显示当前路径
+    function displayCurrentPath() {
+        const currentPathElement = document.getElementById("current-path");
+        if (currentPathElement) {
+            currentPathElement.textContent = window.location.pathname;
+        }
+    }
+
+    // 更新路径标签
+    function updatePathLabel(lang: string) {
+        const pathLabel = document.getElementById("path-label");
+        if (pathLabel) {
+            pathLabel.textContent = i18n(I18nKey.currentPath, lang) + ":";
+        }
+    }
+
+    // 页面加载完成后更新内容
+    document.addEventListener("DOMContentLoaded", () => {
+        const currentLang = getCurrentLanguage();
+        updatePageContent(currentLang);
+        displayCurrentPath();
+    });
+</script>

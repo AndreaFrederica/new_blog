@@ -1,0 +1,26 @@
+---
+import type { GetStaticPaths } from "astro";
+import Pagination from "../components/control/Pagination.astro";
+import PostPage from "../components/PostPage.astro";
+import { PAGE_SIZE } from "../constants/constants";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+import { getSortedPostsByLanguage } from "../utils/content-utils";
+import { siteConfig } from "../config";
+
+export const getStaticPaths = (async ({ paginate }) => {
+	// 获取默认语言的文章
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	const allBlogPosts = await getSortedPostsByLanguage(defaultLang);
+	return paginate(allBlogPosts, { pageSize: PAGE_SIZE });
+}) satisfies GetStaticPaths;
+// https://github.com/withastro/astro/issues/6507#issuecomment-1489916992
+
+const { page } = Astro.props;
+
+const len = page.data.length;
+---
+
+<MainGridLayout lang={siteConfig.defaultLang || siteConfig.lang}>
+    <PostPage page={page} lang={siteConfig.defaultLang || siteConfig.lang}></PostPage>
+    <Pagination class="mx-auto onload-animation" page={page} style={`animation-delay: calc(var(--content-delay) + ${(len)*50}ms)`}></Pagination>
+</MainGridLayout>

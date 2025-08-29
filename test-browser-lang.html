@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Language Detection Test</title>
+</head>
+<body>
+    <h1>Browser Language Detection Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        // 模拟项目中的语言检测逻辑
+        function getBrowserPreferredLanguage() {
+            const supportedLangs = ['zh_cn', 'en', 'ja', 'ru'];
+            const browserLangs = navigator.languages || [navigator.language];
+            
+            console.log('Browser languages:', browserLangs);
+            
+            for (const browserLang of browserLangs) {
+                const normalizedLang = browserLang.toLowerCase().replace('-', '_');
+                console.log('Checking normalized lang:', normalizedLang);
+                
+                if (supportedLangs.includes(normalizedLang)) {
+                    return normalizedLang;
+                }
+                
+                // 尝试匹配语言的主要部分（如 en-US -> en）
+                const mainLang = normalizedLang.split('_')[0];
+                console.log('Checking main lang:', mainLang);
+                
+                if (supportedLangs.includes(mainLang)) {
+                    return mainLang;
+                }
+            }
+            
+            return 'zh_cn'; // 默认语言
+        }
+        
+        // 显示测试结果
+        const results = document.getElementById('results');
+        const detectedLang = getBrowserPreferredLanguage();
+        
+        results.innerHTML = `
+            <h2>Detection Results:</h2>
+            <p><strong>Browser Languages:</strong> ${JSON.stringify(navigator.languages || [navigator.language])}</p>
+            <p><strong>Detected Language:</strong> ${detectedLang}</p>
+            <p><strong>Supported Languages:</strong> ['zh_cn', 'en', 'ja', 'ru']</p>
+            
+            <h3>Test Cases:</h3>
+            <ul>
+                <li>If your browser is set to English (en-US, en-GB, etc.), detected language should be 'en'</li>
+                <li>If your browser is set to Chinese (zh-CN, zh-TW, etc.), detected language should be 'zh_cn'</li>
+                <li>If your browser is set to Japanese (ja), detected language should be 'ja'</li>
+                <li>If your browser is set to Russian (ru), detected language should be 'ru'</li>
+                <li>If your browser language is not supported, detected language should be 'zh_cn' (default)</li>
+            </ul>
+        `;
+    </script>
+</body>
+</html>
