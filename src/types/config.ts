@@ -68,9 +68,10 @@ export type ProfileConfig = {
 };
 
 export type LicenseConfig = {
-	enable: boolean;
-	name: string;
-	url: string;
+    enable: boolean;
+    id?: string; // optional preset id (e.g., 'all_rights_reserved')
+    name: string;
+    url: string;
 };
 
 export type LIGHT_DARK_MODE =

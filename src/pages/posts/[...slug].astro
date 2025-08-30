@@ -119,6 +119,9 @@ const jsonLd = {
                         updated={entry.data.updated}
                         tags={entry.data.tags}
                         category={entry.data.category}
+                        licenseName={entry.data.license}
+                        licenseUrl={entry.data.licenseUrl}
+                        lang={entry.data.lang}
                 ></PostMetadata>
                 
 
@@ -137,7 +140,7 @@ const jsonLd = {
                 <Content />
             </Markdown>
 
-            {licenseConfig.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} class="mb-6 license-container onload-animation"></License>}
+            {licenseConfig.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation"></License>}
 
         </div>
     </div>

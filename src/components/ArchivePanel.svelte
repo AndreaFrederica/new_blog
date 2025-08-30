@@ -80,14 +80,19 @@ onMount(async () => {
 
 	const grouped = filteredPosts.reduce(
 		(acc, post) => {
-			const year = post.data.published.getFullYear();
-			if (!acc[year]) {
-				acc[year] = [];
+			let year = "未知";
+			const pub = post.data.published;
+			if (pub instanceof Date && !isNaN(pub.getTime())) {
+				year = pub.getFullYear();
+			} else if (typeof pub === "string") {
+				const dateObj = new Date(pub);
+				if (!isNaN(dateObj.getTime())) year = dateObj.getFullYear();
 			}
+			if (!acc[year]) acc[year] = [];
 			acc[year].push(post);
 			return acc;
 		},
-		{} as Record<number, Post[]>,
+		{} as Record<number | string, Post[]>,
 	);
 
 	const groupedPostsArray = Object.keys(grouped).map((yearStr) => ({

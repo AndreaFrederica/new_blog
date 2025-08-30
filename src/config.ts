@@ -47,9 +47,10 @@ export const siteConfig: SiteConfig = {
 export const navBarConfig: NavBarConfig = {
 	links: [
 		LinkPreset.Home,
+		{ name: i18n(I18nKey.notes), url: "/notes" },
 		LinkPreset.Archive,
 		LinkPreset.About,
-		{ name: "随笔", url: "/notes" },
+
 		//{
 		//	name: "GitHub",
 		//	url: "https://github.com/saicaca/fuwari", // Internal links should not include the base path, as it is automatically added
@@ -94,10 +95,13 @@ export const profileConfig: ProfileConfig = {
 	],
 };
 
+import { getLicenseName, getLicenseUrl } from "./licenses";
+
 export const licenseConfig: LicenseConfig = {
 	enable: true,
-	name: "CC BY-NC-SA 4.0",
-	url: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+	// 默认协议 id：未在文章/随笔中声明时，保留所有权利
+	name: getLicenseName("all_rights_reserved", siteConfig.lang),
+	url: getLicenseUrl("all_rights_reserved"),
 };
 
 export const expressiveCodeConfig: ExpressiveCodeConfig = {

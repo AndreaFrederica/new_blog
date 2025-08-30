@@ -234,12 +234,18 @@ export function getSupportedLanguages(): string[] {
 export type NoteEntry = CollectionEntry<"notes">;
 
 export async function getNotesByLanguage(lang?: string) {
-	const allNotes = await getCollection("notes", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
-	if (!lang) return allNotes;
-	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-	return allNotes.filter((n) => (n.data.lang || defaultLang) === lang);
+    const allNotes = await getCollection("notes", ({ data }) => {
+        return import.meta.env.PROD ? data.draft !== true : true;
+    });
+    // Ensure type tag for notes
+    for (const n of allNotes as NoteEntry[]) {
+        const tags = Array.isArray(n.data.tags) ? n.data.tags : [];
+        if (!tags.includes('随笔')) tags.push('随笔');
+        (n.data as any).tags = tags;
+    }
+    if (!lang) return allNotes;
+    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    return allNotes.filter((n) => (n.data.lang || defaultLang) === lang);
 }
 
 // uses existing Tag type above
@@ -287,4 +293,83 @@ export async function getAllCategoryList(lang?: string): Promise<Category[]> {
 	for (const c of [...posts, ...notes]) map[c.name] = (map[c.name] || 0) + c.count;
 	const keys = Object.keys(map).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 	return keys.map((k) => ({ name: k, count: map[k], url: "" }));
+}
+
+// ---------- Notes fallback helpers ----------
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+function contentNotesDir() {
+    // Resolve absolute path to src/content/notes
+    const dir = fileURLToPath(new URL('../content/notes', import.meta.url));
+    return dir;
+}
+
+function pickHeadingTitle(markdown: string): string | undefined {
+    const lines = markdown.split(/\r?\n/);
+    const headings: { level: number; text: string }[] = [];
+    for (const l of lines) {
+        const m = l.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+        if (m) {
+            headings.push({ level: m[1].length, text: m[2].trim() });
+        }
+    }
+    if (headings.length === 0) return undefined;
+    const minLevel = Math.min(...headings.map(h => h.level));
+    const firstAtMin = headings.find(h => h.level === minLevel);
+    return firstAtMin?.text;
+}
+
+function filenameFromEntry(entry: NoteEntry): string {
+    const base = entry.slug?.split('/').pop() || entry.id || '';
+    return base.replace(/\.mdx?$/i, '').trim();
+}
+
+function fileStatsForEntry(entry: NoteEntry) {
+    try {
+        const dir = contentNotesDir();
+        const id = entry.id || `${entry.slug}.md`;
+        const file = path.join(dir, id);
+        const st = fs.statSync(file);
+        // Prefer birthtime, fallback to ctime/mtime
+        const created = st.birthtime && !isNaN(st.birthtime.getTime()) ? st.birthtime : st.ctime;
+        const updated = st.mtime;
+        return { created, updated };
+    } catch {
+        const now = new Date();
+        return { created: now, updated: now };
+    }
+}
+
+export async function getNotesWithFallback() {
+    const notes = await getCollection('notes', ({ data }) => {
+        return import.meta.env.PROD ? data.draft !== true : true;
+    });
+    for (const n of notes as NoteEntry[]) {
+        // Title
+        let title = (n.data as any).title as string | undefined;
+        if (!title || title.trim() === '') {
+            title = pickHeadingTitle((n as any).body || '') || filenameFromEntry(n);
+            (n.data as any).title = title;
+        }
+        // Dates
+        if (!(n.data as any).published) {
+            const { created, updated } = fileStatsForEntry(n);
+            (n.data as any).published = created;
+            if (!(n.data as any).updated) (n.data as any).updated = updated;
+        }
+        if (!(n.data as any).updated) {
+            const { updated } = fileStatsForEntry(n);
+            (n.data as any).updated = updated;
+        }
+        // Ensure arrays exist
+        (n.data as any).tags = Array.isArray(n.data.tags) ? n.data.tags : [];
+        (n.data as any).category = (n.data as any).category || '';
+        // Auto-append type tag
+        if (!((n.data as any).tags as string[]).includes('随笔')) {
+            (n.data as any).tags.push('随笔');
+        }
+    }
+    return notes as NoteEntry[];
 }

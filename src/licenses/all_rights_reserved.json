@@ -1,0 +1,9 @@
+{
+    "id": "all_rights_reserved",
+    "name": {
+        "zh_cn": "保留所有权利",
+        "en": "All Rights Reserved"
+    },
+    "url": "/license/all_rights_reserved",
+    "doc": "all_rights_reserved.md"
+}

@@ -1,17 +1,10 @@
 ---
-import { getCollection } from "astro:content";
+import { getNotesWithFallback } from "@utils/content-utils.ts";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { siteConfig } from "@/config";
 import NoteCard from "@components/NoteCard.astro";
 
-let notes = (await getCollection("notes")).filter((n) => !n.data.draft);
-// 自动追加“随笔”标签
-notes = notes.map((n) => {
-  const tags = Array.isArray(n.data.tags) ? n.data.tags : [];
-  if (!tags.includes('随笔')) tags.push('随笔');
-  n.data.tags = tags;
-  return n;
-});
+let notes = await getNotesWithFallback();
 // 处理过滤参数 + 视图模式与分页
 const params = Astro.url.searchParams;
 const view = params.get('view') || 'pages'; // 'pages' | 'continuous'

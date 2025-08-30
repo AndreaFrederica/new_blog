@@ -1,8 +1,9 @@
 ---
 import { Icon } from "astro-icon/components";
-import { licenseConfig, profileConfig } from "../../config";
+import { licenseConfig, profileConfig, siteConfig } from "../../config";
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
+import { getLicenseById, getLicenseUrl } from "../../licenses/index";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
 
 interface Props {
@@ -11,27 +12,66 @@ interface Props {
 	pubDate: Date;
 	class: string;
 	lang?: string;
+	license?: string;
+	licenseName?: string;
+	licenseUrl?: string;
+}
+
+// 只声明一次 currentLang，并提前
+
+// 从URL中提取语言或使用传入的lang参数
+function extractLangFromUrl(url: string): string {
+	const match = url.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/?|$)/i);
+	if (match) {
+		const supportedLangs = ["zh_cn", "en", "ja", "ru"];
+		if (supportedLangs.includes(match[1])) {
+			return match[1];
+		}
+	}
+	return "zh_cn";
 }
 
 const { title, pubDate, lang } = Astro.props;
 const className = Astro.props.class;
 const profileConf = profileConfig;
-const licenseConf = licenseConfig;
+const propLicenseName = Astro.props.licenseName as string | undefined;
+const propLicenseUrl = Astro.props.licenseUrl as string | undefined;
+const propLicenseId = Astro.props.license as string | undefined;
+const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
 const postUrl = decodeURIComponent(Astro.url.toString());
 
-// 从URL中提取语言或使用传入的lang参数
-function extractLangFromUrl(url: string): string {
-	const match = url.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
-	if (match) {
-		const supportedLangs = ['zh_cn', 'en', 'ja', 'ru'];
-		if (supportedLangs.includes(match[1])) {
-			return match[1];
-		}
-	}
-	return 'zh_cn';
+let licenseConf = {
+    name: propLicenseName || licenseConfig.name,
+    // treat empty string as unset to ensure we keep a working default link
+    url: (propLicenseUrl || licenseConfig.url),
+};
+
+if (propLicenseId) {
+    const licObj = getLicenseById(propLicenseId);
+    if (licObj) {
+        licenseConf = {
+            name:
+                licObj.name[currentLang] ||
+                licObj.name["zh_cn"] ||
+                licObj.name["en"] ||
+                licObj.id,
+            url: licObj.url,
+        };
+    }
 }
 
-const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
+function localizeUrl(url?: string, currentLang?: string) {
+    if (!url) return url;
+    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    if (!currentLang || currentLang === defaultLang) return url;
+    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+    if (url === "/license") return `/${currentLang}/license`;
+    return url;
+}
+
+// Ensure we always have a sensible URL (prefer resolved, then site default, then preset fallback)
+const fallbackUrl = (licenseConfig.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
+licenseConf.url = localizeUrl(licenseConf.url || fallbackUrl, currentLang);
 ---
 <div class={`relative transition overflow-hidden bg-[var(--license-block-bg)] py-5 px-6 ${className}`}>
     <div class="transition font-bold text-black/75 dark:text-white/75">
@@ -51,10 +91,13 @@ const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
         </div>
         <div>
             <div class="transition text-black/30 dark:text-white/30 text-sm">{i18n(I18nKey.license, currentLang)}</div>
-            <a href={licenseConf.url} target="_blank" class="link text-[var(--primary)] line-clamp-2">{licenseConf.name}</a>
+            {licenseConf.url
+                ? <a href={licenseConf.url} target="_blank" class="link text-[var(--primary)] line-clamp-2">{licenseConf.name}</a>
+                : <span class="text-black/75 dark:text-white/75 line-clamp-2">{licenseConf.name}</span>
+            }
         </div>
     </div>
-    <Icon name="fa6-brands:creative-commons" class="transition text-[15rem] absolute pointer-events-none right-6 top-1/2 -translate-y-1/2 text-black/5 dark:text-white/5"></Icon>
+    {licenseConf.url && <Icon name="fa6-brands:creative-commons" class="transition text-[15rem] absolute pointer-events-none right-6 top-1/2 -translate-y-1/2 text-black/5 dark:text-white/5"></Icon>}
 </div>
 
 <script>

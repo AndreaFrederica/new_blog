@@ -1,7 +1,8 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
-import { licenseConfig } from "../config";
+import { licenseConfig, siteConfig } from "../config";
+import { getLicenseById } from "../licenses";
 import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
@@ -35,6 +36,30 @@ const {
 const className = Astro.props.class;
 
 const { Content, remarkPluginFrontmatter } = await entry.render();
+let licenseName = (entry.data as any)?.license || licenseConfig.name;
+let licenseUrl = (entry.data as any)?.licenseUrl ?? licenseConfig.url;
+const langCode = (entry.data as any)?.lang || siteConfig.lang || "zh_cn";
+
+// Resolve predefined license ids to display name/url
+if (licenseName) {
+    const licObj = getLicenseById(licenseName);
+    if (licObj) {
+        licenseName = licObj.name[langCode] || licObj.name["zh_cn"] || licObj.name["en"] || licObj.id;
+        if (!(entry.data as any)?.licenseUrl) licenseUrl = licObj.url;
+    }
+}
+
+function localizeUrl(url?: string, currentLang?: string) {
+    if (!url) return url;
+    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    if (!currentLang || currentLang === defaultLang) return url;
+    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+    if (url === "/license") return `/${currentLang}/license`;
+    return url;
+}
+
+licenseUrl = (localizeUrl(licenseUrl, langCode) || "").trim();
+const hasLicenseUrl = licenseUrl.length > 0;
 
 // Prepare tags for display (hide synthetic type tag if present)
 const HIDE_TAG = "随笔";
@@ -98,10 +123,11 @@ const displayTags: string[] = Array.isArray(tags) ? tags.filter((t) => t !== HID
                     <div class="meta-icon">
                         <Icon name="material-symbols:copyright-outline-rounded" class="text-xl" />
                     </div>
-                    <a href={licenseConfig.url} target="_blank"
-                        class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
-                        {licenseConfig.name}
-                    </a>
+                    {(licenseUrl)
+                        ? <a href={licenseUrl} target="_blank"
+                             class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">{licenseName}</a>
+                        : <span class="text-50 text-sm font-medium whitespace-nowrap">{licenseName}</span>
+                    }
                 </div>
             )}
         </div>

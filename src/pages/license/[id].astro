@@ -1,0 +1,40 @@
+---
+import fs from "node:fs/promises";
+import Markdown from "@components/misc/Markdown.astro";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { licenses, getLicenseById } from "../../licenses";
+import markdownIt from "markdown-it";
+
+export function getStaticPaths() {
+  return licenses.map((l) => ({ params: { id: l.id } }));
+}
+
+const { id } = Astro.params as { id: string };
+const lic = id ? getLicenseById(id) : undefined;
+
+if (!lic) {
+  return Astro.redirect("/404");
+}
+
+// Resolve markdown file path: prefer explicit doc, fallback to `${id}.md`
+const mdFile = lic.doc || `${lic.id}.md`;
+const mdUrl = new URL(`../../licenses/${mdFile}`, import.meta.url);
+
+let html = "";
+try {
+  const content = await fs.readFile(mdUrl, "utf-8");
+  const md = markdownIt({ html: true, linkify: true, breaks: false });
+  html = md.render(content);
+} catch (e) {
+  html = `<p>License document not found.</p>`;
+}
+---
+<MainGridLayout title={lic.name["zh_cn"] || lic.name["en"] || lic.id} description={lic.name["en"] || lic.id}>
+  <div class="flex w-full overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-9 py-6 relative w-full ">
+      <Markdown class="mt-2">
+        <div set:html={html} />
+      </Markdown>
+    </div>
+  </div>
+</MainGridLayout>

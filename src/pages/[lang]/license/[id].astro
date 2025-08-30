@@ -1,0 +1,51 @@
+---
+import fs from "node:fs/promises";
+import Markdown from "@components/misc/Markdown.astro";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { getLicenseById, licenses } from "../../../licenses";
+import { siteConfig } from "../../../config";
+import markdownIt from "markdown-it";
+
+export function getStaticPaths() {
+  const supported = siteConfig.supportedLangs || ["en"];
+  const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+  const langs = supported.filter((l) => l !== defaultLang);
+  const paths: any[] = [];
+  for (const lang of langs) {
+    for (const l of licenses) paths.push({ params: { lang, id: l.id } });
+  }
+  return paths;
+}
+
+const { lang, id } = Astro.params as { lang: string; id: string };
+const lic = id ? getLicenseById(id) : undefined;
+
+if (!lic) {
+  return Astro.redirect("/404");
+}
+
+// Prefer language-specific doc if exists: <id>_<lang>.md, else <id>.md
+const tryDocs = [`${lic.id}_${lang}.md`, `${lic.id}.md`];
+let html = "";
+let found = false;
+for (const file of tryDocs) {
+  const mdUrl = new URL(`../../../licenses/${file}`, import.meta.url);
+  try {
+    const content = await fs.readFile(mdUrl, "utf-8");
+    const md = markdownIt({ html: true, linkify: true, breaks: false });
+    html = md.render(content);
+    found = true;
+    break;
+  } catch {}
+}
+if (!found) html = `<p>License document not found.</p>`;
+---
+<MainGridLayout title={lic.name["zh_cn"] || lic.name["en"] || lic.id} description={lic.name["en"] || lic.id} lang={lang}>
+  <div class="flex w-full overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-9 py-6 relative w-full ">
+      <Markdown class="mt-2">
+        <div set:html={html} />
+      </Markdown>
+    </div>
+  </div>
+</MainGridLayout>

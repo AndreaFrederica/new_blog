@@ -1,0 +1,47 @@
+---
+import { getEntry, render } from "astro:content";
+import Markdown from "@components/misc/Markdown.astro";
+import MainGridLayout from "../../layouts/MainGridLayout.astro";
+import { siteConfig } from "../../config";
+import { isSupportedLanguage } from "@utils/i18n-utils";
+
+export async function getStaticPaths() {
+  const supportedLangs = siteConfig.supportedLangs || ["en"]; 
+  const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+  return supportedLangs
+    .filter((lang) => lang !== defaultLang)
+    .map((lang) => ({ params: { lang }, props: { lang } }));
+}
+
+const { lang } = Astro.params;
+if (!isSupportedLanguage(lang)) {
+  return Astro.redirect("/404");
+}
+
+let licensePost: any;
+try {
+  // try language-specific spec: license_{lang}.md
+  licensePost = await getEntry("spec", `license_${lang}`);
+  if (!licensePost) {
+    licensePost = await getEntry("spec", "license");
+  }
+} catch {
+  licensePost = await getEntry("spec", "license");
+}
+
+let Content: any = null;
+if (licensePost) {
+  const rendered = await render(licensePost);
+  Content = rendered.Content;
+}
+---
+<MainGridLayout title="License" description="License" lang={lang}>
+  <div class="flex w-full overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-9 py-6 relative w-full ">
+      <Markdown class="mt-2">
+        {Content && <Content />}
+      </Markdown>
+    </div>
+  </div>
+</MainGridLayout>
+

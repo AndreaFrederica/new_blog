@@ -1,0 +1,8 @@
+{
+    "id": "mit",
+    "name": {
+        "zh_cn": "MIT 许可证",
+        "en": "MIT License"
+    },
+    "url": "https://opensource.org/licenses/MIT"
+}

@@ -4,7 +4,8 @@ import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 import { getCategoryUrl, getTagUrl } from "../utils/url-utils";
-import { licenseConfig } from "../config";
+import { licenseConfig, siteConfig } from "../config";
+import { getLicenseById, getLicenseUrl } from "../licenses";
 
 interface Props {
 	class: string;
@@ -15,6 +16,9 @@ interface Props {
 	hideTagsForMobile?: boolean;
 	hideUpdateDate?: boolean;
     categoryUrlBase?: string; // optional: 'notes' to link to /notes?category=
+    licenseName?: string;
+    licenseUrl?: string;
+    lang?: string;
 }
 const {
 	published,
@@ -24,8 +28,38 @@ const {
 	hideTagsForMobile = false,
 	hideUpdateDate = false,
     categoryUrlBase = "",
+    licenseName,
+    licenseUrl,
+    lang,
 } = Astro.props;
 const className = Astro.props.class;
+
+// Resolve predefined license ids to display name/url
+let resolvedLicenseName = licenseName;
+let resolvedLicenseUrl = licenseUrl;
+if (licenseName) {
+    const licObj = getLicenseById(licenseName);
+    if (licObj) {
+        const langCode = lang || siteConfig.lang || "zh_cn";
+        resolvedLicenseName = licObj.name[langCode] || licObj.name["zh_cn"] || licObj.name["en"] || licObj.id;
+        if (!resolvedLicenseUrl) resolvedLicenseUrl = licObj.url;
+    }
+}
+
+function localizeUrl(url?: string, currentLang?: string) {
+    if (!url) return url;
+    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    if (!currentLang || currentLang === defaultLang) return url;
+    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+    if (url === "/license") return `/${currentLang}/license`;
+    return url;
+}
+
+const displayUrl = localizeUrl(resolvedLicenseUrl || licenseConfig.url, lang);
+const displayName = resolvedLicenseName || licenseConfig.name;
+const fallbackUrl = (licenseConfig.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
+const computedUrl = (displayUrl || "").trim() || fallbackUrl;
+const hasUrl = computedUrl.length > 0;
 ---
 
 <div class:list={["flex flex-wrap text-neutral-500 dark:text-neutral-400 items-center gap-4 gap-x-4 gap-y-2", className]}>
@@ -55,10 +89,13 @@ const className = Astro.props.class;
             <div class="meta-icon">
                 <Icon name="material-symbols:copyright-outline-rounded" class="text-xl"></Icon>
             </div>
-            <a href={licenseConfig.url} target="_blank"
-               class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
-                {licenseConfig.name}
-            </a>
+            {hasUrl
+                ? <a href={computedUrl} target="_blank"
+                     class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
+                        {displayName}
+                  </a>
+                : <span class="text-50 text-sm font-medium whitespace-nowrap">{displayName}</span>
+            }
         </div>
     )}
 

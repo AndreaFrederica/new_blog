@@ -1,0 +1,8 @@
+{
+    "id": "apache_2_0",
+    "name": {
+        "zh_cn": "Apache 2.0 许可证",
+        "en": "Apache License 2.0"
+    },
+    "url": "https://www.apache.org/licenses/LICENSE-2.0"
+}

@@ -1,14 +1,57 @@
+(CC
+0 国际 (CC BY 
+0 国际 (CC BY-NC 
+0 许可证
+0.json
+0)
+2.
+2.0
+20
+4_
+4.
+4.0
+4.0)
+40
+allrightsreserved
+allrightsreserved.json
+apache
+Apache
+Apache 
+Apache 2.0 许可证
+apache20.json
+BY
+CC
+ccby
+ccby4
+ccby4_0.json
+ccbync
+ccbync40.json
+json
+mit
+MIT
+MIT 许可证
+mit.json
+NC
 中文对话
 中文对话2
 中文思考
 主角人物
 书名号
+保留所有权利
 剧透点
+国际
 灵能
+知识共享署名
+知识共享署名 
+知识共享署名 4.0 国际 (CC BY 4.0)
+知识共享署名-非商业性使用 
+知识共享署名-非商业性使用 4.0 国际 (CC BY-NC 4.0)
 示例
 示例角色
 禁用词
 禁用词2
 聚能器
 聚能阵列
+许可证
 阵列
+非商业性使用

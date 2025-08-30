@@ -30,5 +30,6 @@
   "andrea.roleJson5.openWithRoleManager": false,
   "cSpell.words": [
     "Sirrus"
-  ]
+  ],
+  "andrea.typeset.trimTrailingSpaces": false
 }
