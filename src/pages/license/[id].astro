@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { licenses, getLicenseById } from "../../licenses";
+import { siteConfig } from "../../config";
 import markdownIt from "markdown-it";
 
 export function getStaticPaths() {
@@ -16,18 +17,50 @@ if (!lic) {
   return Astro.redirect("/404");
 }
 
-// Resolve markdown file path: prefer explicit doc, fallback to `${id}.md`
-const mdFile = lic.doc || `${lic.id}.md`;
-const mdUrl = new URL(`../../licenses/${mdFile}`, import.meta.url);
+// i18n-aware doc resolution: try default lang variant, generic, then any available language
+async function resolveMarkdownHtml(licenseId: string) {
+  const supported = siteConfig.supportedLangs || ["en"]; // order matters
+  const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+  const candidates: string[] = [];
+  // prefer explicit mapping
+  if (lic?.doc) candidates.push(lic.doc);
+  // try default language specific doc
+  candidates.push(`${licenseId}_${defaultLang}.md`);
+  // then generic
+  candidates.push(`${licenseId}.md`);
+  // then other supported languages
+  for (const l of supported) {
+    if (l !== defaultLang) candidates.push(`${licenseId}_${l}.md`);
+  }
+  // finally, scan directory for any matching files if previous attempts fail
+  const licensesDir = new URL(`../../licenses/`, import.meta.url);
+  try {
+    const files = await fs.readdir(licensesDir);
+    for (const f of files) {
+      if (f.startsWith(`${licenseId}_`) && f.endsWith(`.md`)) candidates.push(f);
+    }
+  } catch {}
 
-let html = "";
-try {
-  const content = await fs.readFile(mdUrl, "utf-8");
-  const md = markdownIt({ html: true, linkify: true, breaks: false });
-  html = md.render(content);
-} catch (e) {
-  html = `<p>License document not found.</p>`;
+  // de-dup
+  const seen = new Set<string>();
+  const uniq = candidates.filter((f) => {
+    if (seen.has(f)) return false;
+    seen.add(f);
+    return true;
+  });
+
+  for (const file of uniq) {
+    try {
+      const mdUrl = new URL(`../../licenses/${file}`, import.meta.url);
+      const content = await fs.readFile(mdUrl, "utf-8");
+      const md = markdownIt({ html: true, linkify: true, breaks: false });
+      return md.render(content);
+    } catch {}
+  }
+  return `<p>License document not found.</p>`;
 }
+
+const html = await resolveMarkdownHtml(lic.id);
 ---
 <MainGridLayout title={lic.name["zh_cn"] || lic.name["en"] || lic.id} description={lic.name["en"] || lic.id}>
   <div class="flex w-full overflow-hidden relative min-h-32">

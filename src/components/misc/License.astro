@@ -1,6 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
-import { licenseConfig, profileConfig, siteConfig } from "../../config";
+import { getLicenseConfig, profileConfig, siteConfig } from "../../config";
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
 import { getLicenseById, getLicenseUrl } from "../../licenses/index";
@@ -40,12 +40,8 @@ const propLicenseId = Astro.props.license as string | undefined;
 const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
 const postUrl = decodeURIComponent(Astro.url.toString());
 
-let licenseConf = {
-    name: propLicenseName || licenseConfig.name,
-    // treat empty string as unset to ensure we keep a working default link
-    url: (propLicenseUrl || licenseConfig.url),
-};
-
+const licenseObj = getLicenseConfig(currentLang);
+let licenseConf;
 if (propLicenseId) {
     const licObj = getLicenseById(propLicenseId);
     if (licObj) {
@@ -57,20 +53,48 @@ if (propLicenseId) {
                 licObj.id,
             url: licObj.url,
         };
+    } else {
+        // fallback to default license if id not found
+        const defaultLic = getLicenseById(
+            licenseObj.id || "all_rights_reserved",
+        );
+        licenseConf = {
+            name: defaultLic
+                ? defaultLic.name[currentLang] ||
+                    defaultLic.name["zh_cn"] ||
+                    defaultLic.name["en"] ||
+                    defaultLic.id
+                : "",
+            url: defaultLic ? defaultLic.url : "",
+        };
     }
+} else {
+    // 没有声明 license 时，渲染默认许可证
+    const defaultLic = getLicenseById(licenseObj.id || "all_rights_reserved");
+    licenseConf = {
+        name: defaultLic
+            ? defaultLic.name[currentLang] ||
+                defaultLic.name["zh_cn"] ||
+                defaultLic.name["en"] ||
+                defaultLic.id
+            : "",
+        url: defaultLic ? defaultLic.url : "",
+    };
 }
 
 function localizeUrl(url?: string, currentLang?: string) {
-    if (!url) return url;
-    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-    if (!currentLang || currentLang === defaultLang) return url;
-    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
-    if (url === "/license") return `/${currentLang}/license`;
-    return url;
+	if (!url) return url;
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	if (!currentLang || currentLang === defaultLang) return url;
+	if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+	if (url === "/license") return `/${currentLang}/license`;
+	return url;
 }
 
 // Ensure we always have a sensible URL (prefer resolved, then site default, then preset fallback)
-const fallbackUrl = (licenseConfig.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
+const defaultId = licenseObj.id || "all_rights_reserved";
+const fallbackUrl =
+    (licenseObj.url || "").trim() || (getLicenseUrl(defaultId) || "").trim();
 licenseConf.url = localizeUrl(licenseConf.url || fallbackUrl, currentLang);
 ---
 <div class={`relative transition overflow-hidden bg-[var(--license-block-bg)] py-5 px-6 ${className}`}>

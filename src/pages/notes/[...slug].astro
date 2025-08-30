@@ -5,7 +5,7 @@ import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import PostMetadata from "@components/PostMeta.astro";
 import License from "@components/misc/License.astro";
-import { licenseConfig } from "src/config";
+import { getLicenseConfig } from "src/config";
 
 export async function getStaticPaths() {
   const notes = await getNotesWithFallback();
@@ -16,6 +16,7 @@ const { entry } = Astro.props as { entry: any };
 const { Content, headings } = await entry.render();
 // tags 已在 helper 中保证包含“随笔”
 const noteTags: string[] = Array.isArray(entry.data.tags) ? [...entry.data.tags] : [];
+const licenseObj = getLicenseConfig(entry.data.lang || "zh_cn");
 ---
 <MainGridLayout title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings} scope="notes">
   <div class="flex w-full overflow-hidden relative mb-4">
@@ -35,7 +36,7 @@ const noteTags: string[] = Array.isArray(entry.data.tags) ? [...entry.data.tags]
         <Content />
       </Markdown>
 
-      {licenseConfig.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation" />}
+  {licenseObj.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation" />}
     </div>
   </div>
 </MainGridLayout>

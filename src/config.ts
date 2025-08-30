@@ -97,12 +97,22 @@ export const profileConfig: ProfileConfig = {
 
 import { getLicenseName, getLicenseUrl } from "./licenses";
 
-export const licenseConfig: LicenseConfig = {
-	enable: true,
-	// 默认协议 id：未在文章/随笔中声明时，保留所有权利
-	name: getLicenseName("all_rights_reserved", siteConfig.lang),
-	url: getLicenseUrl("all_rights_reserved"),
-};
+// 许可证配置函数，name 和 url 始终跟随用户语言
+export function getLicenseConfig(currentLang: string) {
+	return {
+		enable: true,
+		// 默认协议 id：未在文章/随笔中声明时，保留所有权利
+		id: "all_rights_reserved",
+		name: getLicenseName("all_rights_reserved", currentLang),
+		url: getLicenseUrl("all_rights_reserved"),
+	};
+}
+
+// 获取当前语言下的默认许可证信息
+// 保持兼容性，getDefaultLicense 直接返回 getLicenseConfig(currentLang) 的结果
+export function getDefaultLicense(currentLang: string) {
+	return getLicenseConfig(currentLang);
+}
 
 export const expressiveCodeConfig: ExpressiveCodeConfig = {
 	// Note: Some styles (such as background color) are being overridden, see the astro.config.mjs file.

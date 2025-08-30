@@ -4,7 +4,7 @@ import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 import { getCategoryUrl, getTagUrl } from "../utils/url-utils";
-import { licenseConfig, siteConfig } from "../config";
+import { getLicenseConfig, siteConfig } from "../config";
 import { getLicenseById, getLicenseUrl } from "../licenses";
 
 interface Props {
@@ -55,9 +55,12 @@ function localizeUrl(url?: string, currentLang?: string) {
     return url;
 }
 
-const displayUrl = localizeUrl(resolvedLicenseUrl || licenseConfig.url, lang);
-const displayName = resolvedLicenseName || licenseConfig.name;
-const fallbackUrl = (licenseConfig.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
+const licenseObj = getLicenseConfig(lang || siteConfig.lang || "zh_cn");
+const defaultId = licenseObj.id || "all_rights_reserved";
+const rawUrl = resolvedLicenseUrl || licenseObj.url || getLicenseUrl(defaultId);
+const displayUrl = localizeUrl(rawUrl, lang);
+const displayName = resolvedLicenseName || licenseObj.name;
+const fallbackUrl = (licenseObj.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
 const computedUrl = (displayUrl || "").trim() || fallbackUrl;
 const hasUrl = computedUrl.length > 0;
 ---
@@ -84,7 +87,7 @@ const hasUrl = computedUrl.length > 0;
     )}
 
     <!-- license -->
-    {licenseConfig.enable && (
+    {licenseObj.enable && (
         <div class="flex items-center">
             <div class="meta-icon">
                 <Icon name="material-symbols:copyright-outline-rounded" class="text-xl"></Icon>

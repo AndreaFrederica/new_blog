@@ -9,7 +9,7 @@ import { getSortedPosts } from "@utils/content-utils";
 import { getDir, getPostUrlBySlug } from "@utils/url-utils";
 import { getPostUrl } from "@utils/i18n-utils";
 import { Icon } from "astro-icon/components";
-import { licenseConfig } from "src/config";
+import { getLicenseConfig } from "src/config";
 import ImageWrapper from "../../components/misc/ImageWrapper.astro";
 import PostMetadata from "../../components/PostMeta.astro";
 import { profileConfig, siteConfig } from "../../config";
@@ -55,22 +55,24 @@ const { Content, headings } = await entry.render();
 
 const { remarkPluginFrontmatter } = await entry.render();
 
+const licenseObj = getLicenseConfig(entry.data.lang || siteConfig.lang || "zh_cn");
+
 const jsonLd = {
-	"@context": "https://schema.org",
-	"@type": "BlogPosting",
-	headline: entry.data.title,
-	description: entry.data.description || entry.data.title,
-	keywords: entry.data.tags,
-	author: {
-		"@type": "Person",
-		name: profileConfig.name,
-		url: Astro.site,
-	},
-	datePublished: formatDateToYYYYMMDD(entry.data.published),
-	inLanguage: entry.data.lang
-		? entry.data.lang.replace("_", "-")
-		: siteConfig.lang.replace("_", "-"),
-	// TODO include cover image here
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: entry.data.title,
+    description: entry.data.description || entry.data.title,
+    keywords: entry.data.tags,
+    author: {
+        "@type": "Person",
+        name: profileConfig.name,
+        url: Astro.site,
+    },
+    datePublished: formatDateToYYYYMMDD(entry.data.published),
+    inLanguage: entry.data.lang
+        ? entry.data.lang.replace("_", "-")
+        : siteConfig.lang.replace("_", "-"),
+    // TODO include cover image here
 };
 ---
 <MainGridLayout banner={entry.data.image} title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings} scope="posts">
@@ -140,7 +142,8 @@ const jsonLd = {
                 <Content />
             </Markdown>
 
-            {licenseConfig.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation"></License>}
+
+            {licenseObj.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation"></License>}
 
         </div>
     </div>

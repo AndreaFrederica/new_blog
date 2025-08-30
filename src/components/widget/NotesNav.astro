@@ -2,11 +2,15 @@
 import WidgetLayout from "./WidgetLayout.astro";
 
 interface Props {
-  class?: string;
-  lang?: string;
+	class?: string;
+	lang?: string;
+	scope?: string;
 }
 const className = Astro.props.class;
+const scope = Astro.props.scope ?? "posts";
 ---
+
+
 <WidgetLayout id="notes-nav" name="随笔导航" class={className} isCollapsed={false}>
   <div id="notes-nav-list" class="flex flex-col gap-1"></div>
 </WidgetLayout>
@@ -15,7 +19,7 @@ const className = Astro.props.class;
   function buildList() {
     const list = document.getElementById('notes-nav-list');
     if (!list) return;
-    const items = Array.from(document.querySelectorAll('[id^="note-"]')) as HTMLElement[];
+    const items = Array.from(document.querySelectorAll('[id^="note-"]'));
     const links = items.map((wrap) => {
       const titleLink = wrap.querySelector('a');
       const id = wrap.id;
@@ -27,24 +31,37 @@ const className = Astro.props.class;
     )).join('');
   }
 
-  const rebuild = () => {
-    // Only on notes scope
+  function updateNotesNavDisplay() {
+  const nav = document.querySelector('[data-id="notes-nav"]');
+    const list = document.getElementById('notes-nav-list');
     const pageState = document.getElementById('page-state');
     const scope = pageState?.getAttribute('data-scope');
-    if (scope !== 'notes') return;
-    buildList();
-  };
+    console.log('[NotesNav] updateNotesNavDisplay called', { nav, list, pageState, scope });
+    if (!nav || !list) {
+      console.warn('[NotesNav] nav or list not found');
+      return;
+    }
+    if (scope === 'notes') {
+      console.log('[NotesNav] Showing notes nav');
+      nav.style.display = 'block'; // 只切换组件本身
+      buildList();
+    } else {
+      console.log('[NotesNav] Hiding notes nav');
+      nav.style.display = 'none';
+      list.innerHTML = '';
+    }
+  }
 
-  document.addEventListener('DOMContentLoaded', rebuild);
-  window.addEventListener('sidebar:update', rebuild);
+  document.addEventListener('DOMContentLoaded', updateNotesNavDisplay);
+  window.addEventListener('sidebar:update', updateNotesNavDisplay);
   if (window?.swup?.hooks) {
-    window.swup.hooks.on('content:replace', rebuild);
-    window.swup.hooks.on('page:view', rebuild);
+    window.swup.hooks.on('content:replace', updateNotesNavDisplay);
+    window.swup.hooks.on('page:view', updateNotesNavDisplay);
   } else {
     document.addEventListener('swup:enable', () => {
       if (window?.swup?.hooks) {
-        window.swup.hooks.on('content:replace', rebuild);
-        window.swup.hooks.on('page:view', rebuild);
+        window.swup.hooks.on('content:replace', updateNotesNavDisplay);
+        window.swup.hooks.on('page:view', updateNotesNavDisplay);
       }
     });
   }
