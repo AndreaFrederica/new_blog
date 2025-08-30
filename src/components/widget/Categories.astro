@@ -1,7 +1,11 @@
 ---
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
-import { getCategoryList, getNoteCategoryList, getAllCategoryList } from "../../utils/content-utils";
+import {
+	getAllCategoryList,
+	getCategoryList,
+	getNoteCategoryList,
+} from "../../utils/content-utils";
 import { getCategoryUrlWithLang } from "../../utils/i18n-utils";
 import ButtonLink from "../control/ButtonLink.astro";
 import WidgetLayout from "./WidgetLayout.astro";
@@ -10,20 +14,20 @@ interface Props {
 	class?: string;
 	style?: string;
 	lang?: string;
-    scope?: 'posts' | 'notes' | 'all';
+	scope?: "posts" | "notes" | "all";
 }
 const className = Astro.props.class;
 const style = Astro.props.style;
 const lang = Astro.props.lang;
-const scope = Astro.props.scope || 'posts';
+const scope = Astro.props.scope || "posts";
 
 let categories;
-if (scope === 'notes') {
-    categories = await getNoteCategoryList(lang);
-} else if (scope === 'all') {
-    categories = await getAllCategoryList(lang);
+if (scope === "notes") {
+	categories = await getNoteCategoryList(lang);
+} else if (scope === "all") {
+	categories = await getAllCategoryList(lang);
 } else {
-    categories = await getCategoryList(lang);
+	categories = await getCategoryList(lang);
 }
 
 const COLLAPSED_HEIGHT = "7.5rem";
@@ -82,43 +86,87 @@ function setupCategoriesLanguageListener() {
 
 // 页面加载时设置监听器
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Sidebar/Categories] DOMContentLoaded');
     setupCategoriesLanguageListener();
 
-    async function refreshCategories() {
-        const pageState = document.getElementById('page-state');
-        if (!pageState) return;
-        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
-        const defaultLang = pageState.getAttribute('data-default-lang') || 'zh_cn';
-        const scope = pageState.getAttribute('data-scope') || 'posts';
+    type Params = { lang: string; defaultLang: string; scope: 'posts'|'notes'|'all' };
+    async function refreshCategories(params: Params) {
+        try {
+            const { lang, defaultLang, scope } = params;
+            // prefer inline JSON embedded by server for this page
+            const inlineEl = document.getElementById('sidebar-data');
+            let list: any[] | undefined;
+            if (inlineEl?.textContent) {
+                try {
+                    const inline = JSON.parse(inlineEl.textContent);
+                    console.log('[Sidebar/Categories] using inline data', { inlineScope: inline?.scope, inlineLang: inline?.lang });
+                    list = Array.isArray(inline?.categories) ? inline.categories : undefined;
+                } catch { /* ignore */ }
+            }
+            if (!list) {
+                const url = `/api/sidebar.json?scope=${encodeURIComponent(scope)}&lang=${encodeURIComponent(lang)}&_t=${Date.now()}`;
+                console.log('[Sidebar/Categories] refresh start (API)', { lang, defaultLang, scope, url });
+                const res = await fetch(url);
+                console.log('[Sidebar/Categories] fetch response', res.status, res.ok);
+                if (!res.ok) return;
+                const data = await res.json();
+                console.log('[Sidebar/Categories] payload meta', data?.meta);
+                list = data.categories || [];
+            }
+            console.log('[Sidebar/Categories] categories length', list.length, list.slice(0, 3));
 
-        const res = await fetch(`/api/sidebar.json?scope=${encodeURIComponent(scope)}&lang=${encodeURIComponent(lang)}`);
-        if (!res.ok) return;
-        const data = await res.json();
+            const container = document.querySelector('#sidebar #categories-list') || document.querySelector('#categories-list');
+            if (!container) {
+                console.warn('[Sidebar/Categories] #categories-list not found');
+                return;
+            }
 
-        const list = data.categories || [];
-        const container = document.querySelector('#categories-list');
-        if (!container) return;
+            function archiveBase(lang: string, def: string) {
+                return lang && lang !== def ? `/${lang}/archive` : `/archive`;
+            }
 
-        function archiveBase(lang, def) {
-            return lang && lang !== def ? `/${lang}/archive` : `/archive`;
+            const html = list.map((c: any) => {
+                const name = (c.name || '').trim();
+                const href = scope === 'notes' ? (name ? `/notes?category=${encodeURIComponent(name)}` : '/notes?uncategorized=true') : `${archiveBase(lang, defaultLang)}?${name ? `category=${encodeURIComponent(name)}` : 'uncategorized=true'}`;
+                if (name && c && (typeof c.count !== 'undefined')) {
+                    // log first few entries
+                    if (Math.random() < 0.02) console.log('[Sidebar/Categories] sample item', { name, count: c.count, href, scope });
+                }
+                return `
+                    <a href="${href}" aria-label="View all posts in the ${name} category">
+                        <button class="w-full h-10 bg-none hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition-all pl-2 hover:pl-3 text-neutral-700 hover:text-[var(--primary)] dark:text-neutral-300 dark:hover:text-[var(--primary)]">
+                            <div class="flex items-center justify-between relative mr-2">
+                                <div class="overflow-hidden text-left whitespace-nowrap overflow-ellipsis">${name}</div>
+                                <div class="transition px-2 h-7 ml-4 min-w-[2rem] text-sm font-bold text-[var(--btn-content)] dark:text-[var(--deep-text)] bg-[oklch(0.95_0.025_var(--hue))] dark:bg-[var(--primary)] flex items-center justify-center">${c.count}</div>
+                            </div>
+                        </button>
+                    </a>`;
+            }).join('');
+            container.innerHTML = html;
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                (sidebar as HTMLElement).setAttribute('data-scope', scope);
+                (sidebar as HTMLElement).setAttribute('data-lang', lang);
+                console.log('[Sidebar/Categories] DOM updated, sidebar dataset', (sidebar as HTMLElement).dataset);
+            }
+        } catch (e) {
+            console.error('[Sidebar/Categories] refresh error', e);
         }
-
-        container.innerHTML = list.map((c) => {
-            const name = (c.name || '').trim();
-            const href = scope === 'notes' ? (name ? `/notes?category=${encodeURIComponent(name)}` : '/notes?uncategorized=true') : `${archiveBase(lang, defaultLang)}?${name ? `category=${encodeURIComponent(name)}` : 'uncategorized=true'}`;
-            return `
-                <a href="${href}" aria-label="View all posts in the ${name} category">
-                    <button class="w-full h-10 bg-none hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition-all pl-2 hover:pl-3 text-neutral-700 hover:text-[var(--primary)] dark:text-neutral-300 dark:hover:text-[var(--primary)]">
-                        <div class="flex items-center justify-between relative mr-2">
-                            <div class="overflow-hidden text-left whitespace-nowrap overflow-ellipsis">${name}</div>
-                            <div class="transition px-2 h-7 ml-4 min-w-[2rem] text-sm font-bold text-[var(--btn-content)] dark:text-[var(--deep-text)] bg-[oklch(0.95_0.025_var(--hue))] dark:bg-[var(--primary)] flex items-center justify-center">${c.count}</div>
-                        </div>
-                    </button>
-                </a>`;
-        }).join('');
     }
 
-    refreshCategories();
-    document.addEventListener('swup:contentReplaced', refreshCategories);
+    // explicit event-driven update
+    window.addEventListener('sidebar:update', (e: any) => {
+        if (e?.detail) {
+            console.log('[Sidebar/Categories] sidebar:update', e.detail);
+            refreshCategories(e.detail as Params);
+        }
+    });
+    // fallback initial from #page-state if no event yet
+    const pageState = document.getElementById('page-state');
+    if (pageState) {
+        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
+        const def = pageState.getAttribute('data-default-lang') || 'zh_cn';
+        const scope = (pageState.getAttribute('data-scope') || 'posts') as 'posts'|'notes'|'all';
+        refreshCategories({ lang, defaultLang: def, scope });
+    }
 });
-</script>

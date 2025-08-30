@@ -15,7 +15,7 @@ const className = Astro.props.class;
 const lang = Astro.props.lang;
 const scope = Astro.props.scope || 'posts';
 ---
-<div id="sidebar" class:list={[className, "w-full"]}>
+<div id="sidebar" class:list={[className, "w-full"]} data-scope={scope} data-lang={lang}>
     <div class="flex flex-col w-full gap-4 mb-4">
         <Profile lang={lang}></Profile>
     </div>

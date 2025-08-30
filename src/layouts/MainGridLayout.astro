@@ -8,6 +8,7 @@ import { Icon } from "astro-icon/components";
 import ImageWrapper from "../components/misc/ImageWrapper.astro";
 import TOC from "../components/widget/TOC.astro";
 import { siteConfig } from "../config";
+import { getTagList, getNoteTagList, getAllTagList, getCategoryList, getNoteCategoryList, getAllCategoryList } from "../utils/content-utils";
 import {
 	BANNER_HEIGHT,
 	BANNER_HEIGHT_EXTEND,
@@ -41,6 +42,20 @@ const hasBannerLink = !!siteConfig.banner.credit.url;
 const mainPanelTop = siteConfig.banner.enable
 	? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
 	: "5.5rem";
+
+// Precompute sidebar data for this page so the client can update without hitting API
+let sidebarTags: any[] = [];
+let sidebarCategories: any[] = [];
+if (scope === 'notes') {
+    sidebarTags = await getNoteTagList(lang);
+    sidebarCategories = await getNoteCategoryList(lang);
+} else if (scope === 'all') {
+    sidebarTags = await getAllTagList(lang);
+    sidebarCategories = await getAllCategoryList(lang);
+} else {
+    sidebarTags = await getTagList(lang);
+    sidebarCategories = await getCategoryList(lang);
+}
 ---
 
 <Layout title={title} banner={banner} description={description} lang={lang} setOGTypeArticle={setOGTypeArticle}>
@@ -90,6 +105,7 @@ const mainPanelTop = siteConfig.banner.enable
                     <!-- make id different from windows.swup global property -->
                     <slot></slot>
                     <div id="page-state" class="hidden" data-lang={lang} data-scope={scope} data-default-lang={siteConfig.defaultLang || siteConfig.lang}></div>
+                    <script id="sidebar-data" type="application/json" set:html={JSON.stringify({ scope, lang, tags: sidebarTags, categories: sidebarCategories })}></script>
                     <div class="footer col-span-2 onload-animation hidden lg:block">
                         <Footer></Footer>
                     </div>
@@ -126,3 +142,30 @@ const mainPanelTop = siteConfig.banner.enable
     </div>
 </div>
 </Layout>
+
+<script is:inline define:vars={{ scope, lang, defaultLang: (siteConfig.defaultLang || siteConfig.lang) }}>
+    (function(){
+        const params = { scope, lang, defaultLang };
+        const dispatch = () => {
+            console.log('[MainGridLayout] dispatch sidebar:update', params);
+            window.dispatchEvent(new CustomEvent('sidebar:update', { detail: params }));
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', dispatch);
+        } else {
+            dispatch();
+        }
+        if (window?.swup?.hooks) {
+            window.swup.hooks.on('content:replace', dispatch);
+            window.swup.hooks.on('page:view', dispatch);
+        } else {
+            document.addEventListener('swup:enable', () => {
+                if (window?.swup?.hooks) {
+                    window.swup.hooks.on('content:replace', dispatch);
+                    window.swup.hooks.on('page:view', dispatch);
+                }
+            });
+        }
+        window.addEventListener('popstate', dispatch);
+    })();
+ </script>

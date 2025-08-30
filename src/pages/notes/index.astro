@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { siteConfig } from "@/config";
 import NoteCard from "@components/NoteCard.astro";
 
 let notes = (await getCollection("notes")).filter((n) => !n.data.draft);
@@ -30,7 +31,7 @@ if (uncategorized) {
 
 const notesSorted = filtered.sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
 ---
-<MainGridLayout title="随笔 Notes" description="随笔记录与短文" setOGTypeArticle={false} scope="notes">
+<MainGridLayout title="随笔 Notes" description="随笔记录与短文" setOGTypeArticle={false} scope="notes" lang={siteConfig.defaultLang || siteConfig.lang}>
   <div class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
     {notesSorted.map((entry) => (
       <NoteCard

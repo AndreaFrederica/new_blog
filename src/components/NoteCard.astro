@@ -35,22 +35,26 @@ const {
 const className = Astro.props.class;
 
 const { Content, remarkPluginFrontmatter } = await entry.render();
+
+// Prepare tags for display (hide synthetic type tag if present)
+const HIDE_TAG = "随笔";
+const displayTags: string[] = Array.isArray(tags) ? tags.filter((t) => t !== HIDE_TAG) : [];
 ---
 <div class:list={["card-base flex w-full overflow-hidden relative note-card", className]} style={style}>
     <div class="pl-6 md:pl-9 pr-6 md:pr-6 pt-6 md:pt-7 pb-6 relative w-full">
         <a href={url}
-           class="transition group w-full block font-bold mb-3 text-3xl text-90
+           class="transition group relative w-full block font-bold mb-3 text-3xl text-90
         hover:text-[var(--primary)] dark:hover:text-[var(--primary)]
         active:text-[var(--title-active)] dark:active:text-[var(--title-active)]
-        before:w-1 before:h-5 before:bg-[var(--primary)]
-        before:absolute before:top-[35px] before:left-[18px] before:hidden md:before:block
+        md:before:w-1 before:h-5 before:bg-[var(--primary)]
+        before:absolute before:top-[0.75rem] before:left-[-1.125rem] before:hidden md:before:block
         ">
             {title}
             <Icon class="inline text-[2rem] text-[var(--primary)] md:hidden translate-y-0.5 absolute" name="material-symbols:chevron-right-rounded" />
             <Icon class="text-[var(--primary)] text-[2rem] transition hidden md:inline absolute translate-y-0.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0" name="material-symbols:chevron-right-rounded" />
         </a>
 
-        <!-- minimal metadata: date + license -->
+        <!-- minimal metadata: date + category + tags (+ license) -->
         <div class="flex flex-wrap text-neutral-500 dark:text-neutral-400 items-center gap-4 gap-x-4 gap-y-2 mb-4">
             <div class="flex items-center">
                 <div class="meta-icon">
@@ -70,6 +74,25 @@ const { Content, remarkPluginFrontmatter } = await entry.render();
                     </a>
                 </div>
             </div>
+            {displayTags.length > 0 && (
+                <div class="flex items-center">
+                    <div class="meta-icon">
+                        <Icon name="material-symbols:tag-rounded" class="text-xl" />
+                    </div>
+                    <div class="flex flex-row flex-nowrap items-center">
+                        {displayTags.map((tag, i) => (
+                            <>
+                                <div class:list={[{"hidden": i == 0}, "mx-1.5 text-[var(--meta-divider)] text-sm"]}>/</div>
+                                <a href={`/notes?tag=${encodeURIComponent(tag)}`}
+                                   aria-label={`View all notes with the ${tag.trim()} tag`}
+                                   class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
+                                    {tag.trim()}
+                                </a>
+                            </>
+                        ))}
+                    </div>
+                </div>
+            )}
             {licenseConfig.enable && (
                 <div class="flex items-center">
                     <div class="meta-icon">
