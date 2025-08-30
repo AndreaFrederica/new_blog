@@ -12,8 +12,11 @@ notes = notes.map((n) => {
   n.data.tags = tags;
   return n;
 });
-// 处理过滤参数
+// 处理过滤参数 + 视图模式与分页
 const params = Astro.url.searchParams;
+const view = params.get('view') || 'pages'; // 'pages' | 'continuous'
+const PAGE_SIZE = 10;
+let currentPage = Math.max(1, Number(params.get('p') || '1'));
 const filterTags = params.getAll('tag');
 const filterCategories = params.getAll('category');
 const uncategorized = params.get('uncategorized');
@@ -30,21 +33,120 @@ if (uncategorized) {
 }
 
 const notesSorted = filtered.sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+
+let pageCount = 1;
+let listForRender = notesSorted;
+if (view === 'pages') {
+  pageCount = Math.max(1, Math.ceil(notesSorted.length / PAGE_SIZE));
+  if (currentPage > pageCount) currentPage = pageCount;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  listForRender = notesSorted.slice(start, end);
+}
+
+function buildQuery(next: Record<string, string | number | undefined>) {
+  const q = new URLSearchParams(Astro.url.search);
+  Object.entries(next).forEach(([k,v]) => {
+    if (v === undefined || v === null || v === '') q.delete(k); else q.set(k, String(v));
+  });
+  const qs = q.toString();
+  return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
+}
 ---
 <MainGridLayout title="随笔 Notes" description="随笔记录与短文" setOGTypeArticle={false} scope="notes" lang={siteConfig.defaultLang || siteConfig.lang}>
-  <div class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
-    {notesSorted.map((entry) => (
-      <NoteCard
-        entry={entry}
-        title={entry.data.title}
-        published={entry.data.published}
-        updated={entry.data.updated}
-        url={`/notes/${entry.slug}`}
-        description={entry.data.description}
-        tags={entry.data.tags}
-        category={entry.data.category}
-        class:list="onload-animation"
-      />
+  <div class="flex items-center justify-between px-1 md:px-0 mb-3">
+    <div class="flex gap-2">
+      <a id="notes-view-pages" data-no-swup href={buildQuery({ view: 'pages', p: 1 })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'pages'}]}>分页</a>
+      <a id="notes-view-continuous" data-no-swup href={buildQuery({ view: 'continuous', p: undefined })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'continuous'}]}>连续</a>
+    </div>
+    {view === 'pages' && <div id="notes-page-indicator" class="text-sm text-neutral-500 dark:text-neutral-400">第 {currentPage} / {pageCount} 页</div>}
+  </div>
+  <div id="notes-list" class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
+    {notesSorted.map((entry, idx) => (
+      <div id={`note-${entry.slug}`} class:list={["note-item", {"hidden": view === 'pages' && !(idx >= (currentPage-1)*PAGE_SIZE && idx < (currentPage*PAGE_SIZE))}]} data-idx={String(idx)}>
+        <NoteCard
+          entry={entry}
+          title={entry.data.title}
+          published={entry.data.published}
+          updated={entry.data.updated}
+          url={`/notes/${entry.slug}`}
+          description={entry.data.description}
+          tags={entry.data.tags}
+          category={entry.data.category}
+          class:list="onload-animation"
+        />
+      </div>
     ))}
   </div>
+  <div id="notes-pager" class:list={["flex items-center justify-center gap-2 mb-6", {"hidden": !(view === 'pages' && pageCount > 1)}]}>
+    <a id="notes-prev" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage <= 1}]} href={buildQuery({ p: Math.max(1, currentPage-1) })}>上一页</a>
+    <div id="notes-pi" class="text-sm text-neutral-500 dark:text-neutral-400">{currentPage} / {pageCount}</div>
+    <a id="notes-next" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage >= pageCount}]} href={buildQuery({ p: Math.min(pageCount, currentPage+1) })}>下一页</a>
+  </div>
+  <script is:inline define:vars={{ PAGE_SIZE }}>
+    function getParams() {
+      const s = new URLSearchParams(location.search);
+      return {
+        view: s.get('view') || 'pages',
+        p: Math.max(1, Number(s.get('p') || '1')),
+      };
+    }
+    function setParams(next) {
+      const s = new URLSearchParams(location.search);
+      Object.entries(next).forEach(([k,v]) => {
+        if (v === undefined || v === null || v === '') s.delete(k); else s.set(k, String(v));
+      });
+      const url = `${location.pathname}${s.toString() ? '?' + s.toString() : ''}`;
+      history.pushState({}, '', url);
+    }
+    function updateView() {
+      const { view, p } = getParams();
+      const items = Array.from(document.querySelectorAll('#notes-list .note-item'));
+      const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      const page = Math.min(Math.max(1, p), pageCount);
+      items.forEach((el, idx) => {
+        const show = view === 'continuous' || (idx >= (page-1)*PAGE_SIZE && idx < page*PAGE_SIZE);
+        el.classList.toggle('hidden', !show);
+      });
+      const pi = document.getElementById('notes-pi');
+      const indicator = document.getElementById('notes-page-indicator');
+      const pager = document.getElementById('notes-pager');
+      if (view === 'pages' && pageCount > 1) {
+        pager?.classList.remove('hidden');
+        if (pi) pi.textContent = `${page} / ${pageCount}`;
+        if (indicator) indicator.textContent = `第 ${page} / ${pageCount} 页`;
+        const prevEl = document.getElementById('notes-prev');
+        const nextEl = document.getElementById('notes-next');
+        if (prevEl) {
+          prevEl.classList.toggle('opacity-50', page <= 1);
+          prevEl.classList.toggle('pointer-events-none', page <= 1);
+        }
+        if (nextEl) {
+          nextEl.classList.toggle('opacity-50', page >= pageCount);
+          nextEl.classList.toggle('pointer-events-none', page >= pageCount);
+        }
+      } else {
+        pager?.classList.add('hidden');
+      }
+      document.getElementById('notes-view-pages')?.classList.toggle('!bg-[var(--primary)]', view === 'pages');
+      document.getElementById('notes-view-pages')?.classList.toggle('!text-white', view === 'pages');
+      document.getElementById('notes-view-continuous')?.classList.toggle('!bg-[var(--primary)]', view === 'continuous');
+      document.getElementById('notes-view-continuous')?.classList.toggle('!text-white', view === 'continuous');
+      // Rebuild notes nav in sidebar
+      window.dispatchEvent(new CustomEvent('sidebar:update', { detail: { scope: 'notes', lang: document.getElementById('page-state')?.getAttribute('data-lang') || 'zh_cn', defaultLang: document.getElementById('page-state')?.getAttribute('data-default-lang') || 'zh_cn' } }));
+    }
+    function bind() {
+      const pagesBtn = document.getElementById('notes-view-pages');
+      const contBtn = document.getElementById('notes-view-continuous');
+      const stop = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
+      pagesBtn?.addEventListener('click', (e) => { stop(e); setParams({ view: 'pages', p: 1 }); updateView(); }, { capture: true });
+      contBtn?.addEventListener('click', (e) => { stop(e); setParams({ view: 'continuous', p: '' }); updateView(); }, { capture: true });
+      document.getElementById('notes-prev')?.addEventListener('click', (e) => { stop(e); const { p } = getParams(); setParams({ p: Math.max(1, p-1) }); updateView(); }, { capture: true });
+      document.getElementById('notes-next')?.addEventListener('click', (e) => { stop(e); const { p } = getParams(); const items = document.querySelectorAll('#notes-list .note-item').length; const pc = Math.max(1, Math.ceil(items / PAGE_SIZE)); setParams({ p: Math.min(pc, p+1) }); updateView(); }, { capture: true });
+      window.addEventListener('popstate', updateView);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { bind(); updateView(); });
+    } else { bind(); updateView(); }
+  </script>
 </MainGridLayout>

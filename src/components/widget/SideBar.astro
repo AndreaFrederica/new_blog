@@ -3,6 +3,7 @@ import type { MarkdownHeading } from "astro";
 import Categories from "./Categories.astro";
 import Profile from "./Profile.astro";
 import Tag from "./Tags.astro";
+import NotesNav from "./NotesNav.astro";
 
 interface Props {
 	class?: string;
@@ -20,6 +21,7 @@ const scope = Astro.props.scope || 'posts';
         <Profile lang={lang}></Profile>
     </div>
     <div id="sidebar-sticky" class="transition-all duration-700 flex flex-col w-full gap-4 top-4 sticky top-4">
+        {scope === 'notes' && <NotesNav class="onload-animation" style="animation-delay: 100ms" lang={lang} />}
         <Categories class="onload-animation" style="animation-delay: 150ms" lang={lang} scope={scope}></Categories>
         <Tag class="onload-animation" style="animation-delay: 200ms" lang={lang} scope={scope}></Tag>
     </div>

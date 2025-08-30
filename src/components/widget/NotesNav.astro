@@ -1,0 +1,52 @@
+---
+import WidgetLayout from "./WidgetLayout.astro";
+
+interface Props {
+  class?: string;
+  lang?: string;
+}
+const className = Astro.props.class;
+---
+<WidgetLayout id="notes-nav" name="随笔导航" class={className} isCollapsed={false}>
+  <div id="notes-nav-list" class="flex flex-col gap-1"></div>
+</WidgetLayout>
+
+<script>
+  function buildList() {
+    const list = document.getElementById('notes-nav-list');
+    if (!list) return;
+    const items = Array.from(document.querySelectorAll('[id^="note-"]')) as HTMLElement[];
+    const links = items.map((wrap) => {
+      const titleLink = wrap.querySelector('a');
+      const id = wrap.id;
+      const text = titleLink?.textContent?.trim() || id.replace('note-','');
+      return { id, text };
+    });
+    list.innerHTML = links.map((it) => (
+      `<a href="#${it.id}" class="btn-plain text-left px-2 h-8">${it.text}</a>`
+    )).join('');
+  }
+
+  const rebuild = () => {
+    // Only on notes scope
+    const pageState = document.getElementById('page-state');
+    const scope = pageState?.getAttribute('data-scope');
+    if (scope !== 'notes') return;
+    buildList();
+  };
+
+  document.addEventListener('DOMContentLoaded', rebuild);
+  window.addEventListener('sidebar:update', rebuild);
+  if (window?.swup?.hooks) {
+    window.swup.hooks.on('content:replace', rebuild);
+    window.swup.hooks.on('page:view', rebuild);
+  } else {
+    document.addEventListener('swup:enable', () => {
+      if (window?.swup?.hooks) {
+        window.swup.hooks.on('content:replace', rebuild);
+        window.swup.hooks.on('page:view', rebuild);
+      }
+    });
+  }
+</script>
+
