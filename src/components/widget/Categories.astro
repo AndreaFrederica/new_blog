@@ -1,7 +1,7 @@
 ---
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
-import { getCategoryList } from "../../utils/content-utils";
+import { getCategoryList, getNoteCategoryList, getAllCategoryList } from "../../utils/content-utils";
 import { getCategoryUrlWithLang } from "../../utils/i18n-utils";
 import ButtonLink from "../control/ButtonLink.astro";
 import WidgetLayout from "./WidgetLayout.astro";
@@ -10,12 +10,21 @@ interface Props {
 	class?: string;
 	style?: string;
 	lang?: string;
+    scope?: 'posts' | 'notes' | 'all';
 }
 const className = Astro.props.class;
 const style = Astro.props.style;
 const lang = Astro.props.lang;
+const scope = Astro.props.scope || 'posts';
 
-const categories = await getCategoryList(lang);
+let categories;
+if (scope === 'notes') {
+    categories = await getNoteCategoryList(lang);
+} else if (scope === 'all') {
+    categories = await getAllCategoryList(lang);
+} else {
+    categories = await getCategoryList(lang);
+}
 
 const COLLAPSED_HEIGHT = "7.5rem";
 const COLLAPSE_THRESHOLD = 5;
@@ -26,15 +35,17 @@ const isCollapsed = categories.length >= COLLAPSE_THRESHOLD;
 <WidgetLayout name={i18n(I18nKey.categories, lang)} id="categories" isCollapsed={isCollapsed} collapsedHeight={COLLAPSED_HEIGHT}
                 class={className} style={style}
 >
-    {categories.map((c) =>
-        <ButtonLink
-            url={getCategoryUrlWithLang(c.name, lang)}
-            badge={String(c.count)}
-            label={`View all posts in the ${c.name.trim()} category`}
-        >
-            {c.name.trim()}
-        </ButtonLink>
-    )}
+    <div id="categories-list">
+        {categories.map((c) =>
+            <ButtonLink
+                url={scope === 'notes' ? (c.name ? `/notes?category=${encodeURIComponent(c.name)}` : '/notes?uncategorized=true') : getCategoryUrlWithLang(c.name, lang)}
+                badge={String(c.count)}
+                label={`View all posts in the ${c.name.trim()} category`}
+            >
+                {c.name.trim()}
+            </ButtonLink>
+        )}
+    </div>
 </WidgetLayout>
 
 <script>
@@ -72,5 +83,42 @@ function setupCategoriesLanguageListener() {
 // 页面加载时设置监听器
 document.addEventListener('DOMContentLoaded', () => {
     setupCategoriesLanguageListener();
+
+    async function refreshCategories() {
+        const pageState = document.getElementById('page-state');
+        if (!pageState) return;
+        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
+        const defaultLang = pageState.getAttribute('data-default-lang') || 'zh_cn';
+        const scope = pageState.getAttribute('data-scope') || 'posts';
+
+        const res = await fetch(`/api/sidebar.json?scope=${encodeURIComponent(scope)}&lang=${encodeURIComponent(lang)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const list = data.categories || [];
+        const container = document.querySelector('#categories-list');
+        if (!container) return;
+
+        function archiveBase(lang, def) {
+            return lang && lang !== def ? `/${lang}/archive` : `/archive`;
+        }
+
+        container.innerHTML = list.map((c) => {
+            const name = (c.name || '').trim();
+            const href = scope === 'notes' ? (name ? `/notes?category=${encodeURIComponent(name)}` : '/notes?uncategorized=true') : `${archiveBase(lang, defaultLang)}?${name ? `category=${encodeURIComponent(name)}` : 'uncategorized=true'}`;
+            return `
+                <a href="${href}" aria-label="View all posts in the ${name} category">
+                    <button class="w-full h-10 bg-none hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition-all pl-2 hover:pl-3 text-neutral-700 hover:text-[var(--primary)] dark:text-neutral-300 dark:hover:text-[var(--primary)]">
+                        <div class="flex items-center justify-between relative mr-2">
+                            <div class="overflow-hidden text-left whitespace-nowrap overflow-ellipsis">${name}</div>
+                            <div class="transition px-2 h-7 ml-4 min-w-[2rem] text-sm font-bold text-[var(--btn-content)] dark:text-[var(--deep-text)] bg-[oklch(0.95_0.025_var(--hue))] dark:bg-[var(--primary)] flex items-center justify-center">${c.count}</div>
+                        </div>
+                    </button>
+                </a>`;
+        }).join('');
+    }
+
+    refreshCategories();
+    document.addEventListener('swup:contentReplaced', refreshCategories);
 });
 </script>

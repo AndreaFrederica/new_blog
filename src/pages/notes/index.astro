@@ -1,0 +1,49 @@
+---
+import { getCollection } from "astro:content";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import NoteCard from "@components/NoteCard.astro";
+
+let notes = (await getCollection("notes")).filter((n) => !n.data.draft);
+// 自动追加“随笔”标签
+notes = notes.map((n) => {
+  const tags = Array.isArray(n.data.tags) ? n.data.tags : [];
+  if (!tags.includes('随笔')) tags.push('随笔');
+  n.data.tags = tags;
+  return n;
+});
+// 处理过滤参数
+const params = Astro.url.searchParams;
+const filterTags = params.getAll('tag');
+const filterCategories = params.getAll('category');
+const uncategorized = params.get('uncategorized');
+
+let filtered = notes;
+if (filterTags.length > 0) {
+  filtered = filtered.filter((n) => (n.data.tags || []).some((t: string) => filterTags.includes(t)));
+}
+if (filterCategories.length > 0) {
+  filtered = filtered.filter((n) => n.data.category && filterCategories.includes(n.data.category));
+}
+if (uncategorized) {
+  filtered = filtered.filter((n) => !n.data.category);
+}
+
+const notesSorted = filtered.sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+---
+<MainGridLayout title="随笔 Notes" description="随笔记录与短文" setOGTypeArticle={false} scope="notes">
+  <div class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
+    {notesSorted.map((entry) => (
+      <NoteCard
+        entry={entry}
+        title={entry.data.title}
+        published={entry.data.published}
+        updated={entry.data.updated}
+        url={`/notes/${entry.slug}`}
+        description={entry.data.description}
+        tags={entry.data.tags}
+        category={entry.data.category}
+        class:list="onload-animation"
+      />
+    ))}
+  </div>
+</MainGridLayout>

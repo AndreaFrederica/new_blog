@@ -13,6 +13,7 @@ interface Post {
 		category?: string;
 		published: Date;
 	};
+	href?: string; // optional explicit link
 }
 
 // 使用i18n函数获取文章数量文本
@@ -120,7 +121,7 @@ onMount(async () => {
 
             {#each group.posts as post}
                 <a
-                        href={getPostUrl(post.slug, currentLang)}
+                        href={post.href ?? getPostUrl(post.slug, currentLang)}
                         aria-label={post.data.title}
                         class="group btn-plain !block h-10 w-full hover:text-[initial]"
                 >

@@ -2,6 +2,7 @@
 import ArchivePanel from "../../components/ArchivePanel.svelte";
 import MainGridLayout from "../../layouts/MainGridLayout.astro";
 import { getSortedPostsByLanguage } from "../../utils/content-utils";
+import { getCollection } from "astro:content";
 import { siteConfig } from "../../config";
 import { isSupportedLanguage } from "@utils/i18n-utils";
 import I18nKey from "../../i18n/i18nKey";
@@ -35,12 +36,24 @@ const { lang: langParam } = Astro.params;
 if (!isSupportedLanguage(langParam)) {
 	return Astro.redirect('/404');
 }
+// fetch notes of current language
+let notes = await getCollection("notes", ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
+notes = notes.filter(n => (n.data.lang || (siteConfig.defaultLang || siteConfig.lang || 'zh_cn')) === langParam);
+
+const notesList = notes.map(n => ({
+	slug: n.slug,
+	data: { title: n.data.title, tags: n.data.tags || [], category: n.data.category, published: n.data.published },
+	href: `/notes/${n.slug}`
+}));
+
+const merged = [...posts.map((p: any) => ({ slug: p.slug, data: p.data, href: undefined })), ...notesList]
+	.sort((a, b) => new Date(b.data.published).getTime() - new Date(a.data.published).getTime());
 ---
 
-<MainGridLayout title={i18n(I18nKey.archive, langParam)} description={i18n(I18nKey.archive, langParam)} lang={langParam}>
+<MainGridLayout title={i18n(I18nKey.archive, langParam)} description={i18n(I18nKey.archive, langParam)} lang={langParam} scope="all">
     <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative">
         <div class="card-base z-10 px-6 md:px-9 py-8 relative w-full">
-            <ArchivePanel sortedPosts={posts} lang={langParam} client:load />
+            <ArchivePanel sortedPosts={merged} lang={langParam} client:load />
         </div>
     </div>
 </MainGridLayout>

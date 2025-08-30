@@ -44,7 +44,7 @@ if (!isSupportedLanguage(langParam)) {
 const len = page.data.length;
 ---
 
-<MainGridLayout lang={langParam}>
+<MainGridLayout lang={langParam} scope="posts">
     <PostPage page={page} lang={langParam}></PostPage>
     <Pagination class="mx-auto onload-animation" page={page} style={`animation-delay: calc(var(--content-delay) + ${(len)*50}ms)`}></Pagination>
 </MainGridLayout>

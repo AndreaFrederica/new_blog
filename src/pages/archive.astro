@@ -6,13 +6,27 @@ import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { getSortedPostsListByLanguage } from "../utils/content-utils";
 import { siteConfig } from "../config";
 import { extractLangFromUrl } from "../utils/i18n-utils";
+import { getCollection } from "astro:content";
 
 // 从当前URL提取语言，如果没有则使用默认语言
 const currentLang = extractLangFromUrl(Astro.url.pathname);
 const sortedPostsList = await getSortedPostsListByLanguage(currentLang);
+// fetch notes of current language
+let notes = await getCollection("notes", ({ data }) => (import.meta.env.PROD ? data.draft !== true : true));
+notes = notes.filter(n => (n.data.lang || (siteConfig.defaultLang || siteConfig.lang || 'zh_cn')) === currentLang);
+
+const notesList = notes.map(n => ({
+  slug: n.slug,
+  data: { title: n.data.title, tags: n.data.tags || [], category: n.data.category, published: n.data.published },
+  href: `/notes/${n.slug}`
+}));
+
+// merge posts + notes, then sort by published desc
+const merged = [...sortedPostsList.map(p => ({ slug: p.slug, data: p.data, href: undefined })), ...notesList]
+  .sort((a, b) => new Date(b.data.published).getTime() - new Date(a.data.published).getTime());
 ---
 
-<MainGridLayout title={i18n(I18nKey.archive, currentLang)} lang={currentLang}>
-    <ArchivePanel sortedPosts={sortedPostsList} lang={currentLang} client:only="svelte"></ArchivePanel>
+<MainGridLayout title={i18n(I18nKey.archive, currentLang)} lang={currentLang} scope="all">
+    <ArchivePanel sortedPosts={merged} lang={currentLang} client:only="svelte"></ArchivePanel>
 </MainGridLayout>
 

@@ -1,0 +1,49 @@
+// 正则表达式着色器配置文件
+// 这个文件定义了基于正则表达式的文本着色规则
+[
+  // === 正则表达式角色示例（JSON5 合法）===
+  {
+    name: "中文对话",
+    type: "正则表达式",
+    // 中文引号：U+201C/U+201D
+    regex: "“[^”]*”",
+    regexFlags: "g",
+    color: "#fbdc98ff",
+    priority: 100,
+    description: "匹配中文引号内的对话内容",
+    
+  },
+    {
+    name: "中文对话2",
+    type: "正则表达式",
+    // 中文引号：U+201C/U+201D
+    regex: "「[^」]*」",
+    regexFlags: "g",
+    color: "#fbdc98ff",
+    priority: 100,
+    description: "匹配中文引号内的对话内容",
+    
+  },
+      {
+    name: "中文思考",
+    type: "正则表达式",
+    // 中文引号：U+201C/U+201D
+    regex: "‘[^’]*’",
+    regexFlags: "g",
+    color: "#98bbfbff",
+    priority: 95,
+    description: "匹配中文引号内的对话内容",
+    
+  },
+      {
+    name: "书名号",
+    type: "正则表达式",
+    // 中文引号：U+201C/U+201D
+    regex: "《[^》]*》",
+    regexFlags: "g",
+    color: "#fbbc98ff",
+    priority: 90,
+    description: "匹配书名号内的内容",
+    
+  },
+]

@@ -1,7 +1,7 @@
 ---
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
-import { getTagList } from "../../utils/content-utils";
+import { getTagList, getNoteTagList, getAllTagList } from "../../utils/content-utils";
 import { getTagUrlWithLang } from "../../utils/i18n-utils";
 import ButtonTag from "../control/ButtonTag.astro";
 import WidgetLayout from "./WidgetLayout.astro";
@@ -10,21 +10,30 @@ interface Props {
 	class?: string;
 	style?: string;
 	lang?: string;
+    scope?: 'posts' | 'notes' | 'all';
 }
 const className = Astro.props.class;
 const style = Astro.props.style;
 const lang = Astro.props.lang;
+const scope = Astro.props.scope || 'posts';
 
-const tags = await getTagList(lang);
+let tags;
+if (scope === 'notes') {
+    tags = await getNoteTagList(lang);
+} else if (scope === 'all') {
+    tags = await getAllTagList(lang);
+} else {
+    tags = await getTagList(lang);
+}
 
 const COLLAPSED_HEIGHT = "7.5rem";
 
 const isCollapsed = tags.length >= 20;
 ---
 <WidgetLayout name={i18n(I18nKey.tags, lang)} id="tags" isCollapsed={isCollapsed} collapsedHeight={COLLAPSED_HEIGHT} class={className} style={style}>
-    <div class="flex gap-2 flex-wrap">
+    <div id="tags-list" class="flex gap-2 flex-wrap">
         {tags.map(t => (
-            <ButtonTag href={getTagUrlWithLang(t.name, lang)} label={`View all posts with the ${t.name.trim()} tag`}>
+            <ButtonTag href={scope === 'notes' ? `/notes?tag=${encodeURIComponent(t.name)}` : getTagUrlWithLang(t.name, lang)} label={`View all posts with the ${t.name.trim()} tag`}>
                 {t.name.trim()}
             </ButtonTag>
         ))}
@@ -66,5 +75,34 @@ function setupTagsLanguageListener() {
 // 页面加载时设置监听器
 document.addEventListener('DOMContentLoaded', () => {
     setupTagsLanguageListener();
+
+    async function refreshTags() {
+        const pageState = document.getElementById('page-state');
+        if (!pageState) return;
+        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
+        const defaultLang = pageState.getAttribute('data-default-lang') || 'zh_cn';
+        const scope = pageState.getAttribute('data-scope') || 'posts';
+
+        const res = await fetch(`/api/sidebar.json?scope=${encodeURIComponent(scope)}&lang=${encodeURIComponent(lang)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = data.tags || [];
+
+        const container = document.querySelector('#tags-list');
+        if (!container) return;
+
+        function archiveBase(lang, def) {
+            return lang && lang !== def ? `/${lang}/archive` : `/archive`;
+        }
+
+        container.innerHTML = list.map((t) => {
+            const name = (t.name || '').trim();
+            const href = scope === 'notes' ? `/notes?tag=${encodeURIComponent(name)}` : `${archiveBase(lang, defaultLang)}?tag=${encodeURIComponent(name)}`;
+            return `<a href="${href}" aria-label="View all posts with the ${name} tag" class="btn-regular h-8 text-sm px-3">${name}</a>`;
+        }).join('');
+    }
+
+    refreshTags();
+    document.addEventListener('swup:contentReplaced', refreshTags);
 });
 </script>

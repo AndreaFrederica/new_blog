@@ -1,0 +1,21 @@
+[
+    // === 示例敏感词（可删除或新增）===
+    {
+        name: "禁用词",
+        type: "敏感词",
+        color: "#FF4D4F", // 可选：用于高亮
+        description: "需要避免使用的词汇，成稿前需替换。",
+        aliases: ["禁用词2"],
+        fixes: ["不是禁用"],
+        category: "内容安全", // 自定义分类字段
+        severity: "high"      // 自定义严重级别字段
+    },
+    {
+        name: "剧透点",
+        type: "敏感词",
+        color: "#FFA940",
+        description: "尚未公开的剧情关键词。",
+        category: "剧情",
+        severity: "medium"
+    }
+]

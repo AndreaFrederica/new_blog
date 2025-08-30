@@ -23,6 +23,18 @@ const postsCollection = defineCollection({
 		nextLang: z.string().optional(),
 	}),
 });
+const notesCollection = defineCollection({
+    schema: z.object({
+        title: z.string(),
+        published: z.date(),
+        updated: z.date().optional(),
+        draft: z.boolean().optional().default(false),
+        description: z.string().optional().default(""),
+        tags: z.array(z.string()).optional().default([]),
+        category: z.string().optional().nullable().default(""),
+        lang: z.string().default("zh_cn"),
+    }),
+});
 const specCollection = defineCollection({
 	schema: z.object({
 		lang: z.string().default("zh_cn"), // 当前文章语言
@@ -30,6 +42,7 @@ const specCollection = defineCollection({
 	}),
 });
 export const collections = {
-	posts: postsCollection,
-	spec: specCollection,
+    posts: postsCollection,
+    notes: notesCollection,
+    spec: specCollection,
 };

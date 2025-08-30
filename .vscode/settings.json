@@ -18,5 +18,17 @@
     "quickfix.biome": "always",
     "source.organizeImports.biome": "always"
   },
-  "frontMatter.dashboard.openOnStart": false
+  "frontMatter.dashboard.openOnStart": false,
+  "AndreaNovelHelper.workspaceDisabled": false,
+  "cSpell.customDictionaries": {
+    "AndreaRoles": {
+      "path": "./.vscode/cspell-roles.txt",
+      "addWords": true
+    }
+  },
+  "andrea.typeset.statusBar.compact": true,
+  "andrea.roleJson5.openWithRoleManager": false,
+  "cSpell.words": [
+    "Sirrus"
+  ]
 }

@@ -1,0 +1,105 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { Icon } from "astro-icon/components";
+import { licenseConfig } from "../config";
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import { formatDateToYYYYMMDD } from "../utils/date-utils";
+import Markdown from "./misc/Markdown.astro";
+
+interface Props {
+	class?: string;
+	entry: CollectionEntry<"notes">;
+	title: string;
+	url: string;
+	published: Date;
+	updated?: Date;
+	tags?: string[];
+	category?: string | null;
+	description?: string;
+	draft?: boolean;
+	style?: string;
+}
+
+const {
+	entry,
+	title,
+	url,
+	published,
+	updated,
+	tags = [],
+	category = null,
+	description = "",
+	style,
+} = Astro.props;
+const className = Astro.props.class;
+
+const { Content, remarkPluginFrontmatter } = await entry.render();
+---
+<div class:list={["card-base flex w-full overflow-hidden relative note-card", className]} style={style}>
+    <div class="pl-6 md:pl-9 pr-6 md:pr-6 pt-6 md:pt-7 pb-6 relative w-full">
+        <a href={url}
+           class="transition group w-full block font-bold mb-3 text-3xl text-90
+        hover:text-[var(--primary)] dark:hover:text-[var(--primary)]
+        active:text-[var(--title-active)] dark:active:text-[var(--title-active)]
+        before:w-1 before:h-5 before:bg-[var(--primary)]
+        before:absolute before:top-[35px] before:left-[18px] before:hidden md:before:block
+        ">
+            {title}
+            <Icon class="inline text-[2rem] text-[var(--primary)] md:hidden translate-y-0.5 absolute" name="material-symbols:chevron-right-rounded" />
+            <Icon class="text-[var(--primary)] text-[2rem] transition hidden md:inline absolute translate-y-0.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0" name="material-symbols:chevron-right-rounded" />
+        </a>
+
+        <!-- minimal metadata: date + license -->
+        <div class="flex flex-wrap text-neutral-500 dark:text-neutral-400 items-center gap-4 gap-x-4 gap-y-2 mb-4">
+            <div class="flex items-center">
+                <div class="meta-icon">
+                    <Icon name="material-symbols:calendar-today-outline-rounded" class="text-xl" />
+                </div>
+                <span class="text-50 text-sm font-medium">{formatDateToYYYYMMDD(published)}</span>
+            </div>
+            <div class="flex items-center">
+                <div class="meta-icon">
+                    <Icon name="material-symbols:book-2-outline-rounded" class="text-xl" />
+                </div>
+                <div class="flex flex-row flex-nowrap items-center">
+                    <a href={category ? `/notes?category=${encodeURIComponent(category)}` : `/notes?uncategorized=true`}
+                       aria-label={`View all notes in the ${category} category`}
+                       class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
+                        {category || i18n(I18nKey.uncategorized)}
+                    </a>
+                </div>
+            </div>
+            {licenseConfig.enable && (
+                <div class="flex items-center">
+                    <div class="meta-icon">
+                        <Icon name="material-symbols:copyright-outline-rounded" class="text-xl" />
+                    </div>
+                    <a href={licenseConfig.url} target="_blank"
+                        class="link-lg transition text-50 text-sm font-medium hover:text-[var(--primary)] dark:hover:text-[var(--primary)] whitespace-nowrap">
+                        {licenseConfig.name}
+                    </a>
+                </div>
+            )}
+        </div>
+
+        <!-- show full note content -->
+        <Markdown class="mb-3.5 pr-4">
+            <Content />
+        </Markdown>
+
+        <div class="text-sm text-black/30 dark:text-white/30 flex gap-4 transition">
+            <div>
+                {remarkPluginFrontmatter.words} {" " + i18n(remarkPluginFrontmatter.words === 1 ? I18nKey.wordCount : I18nKey.wordsCount)}
+            </div>
+            <div>|</div>
+            <div>
+                {remarkPluginFrontmatter.minutes} {" " + i18n(remarkPluginFrontmatter.minutes === 1 ? I18nKey.minuteCount : I18nKey.minutesCount)}
+            </div>
+        </div>
+    </div>
+</div>
+<div class="transition border-t-[1px] border-dashed mx-6 border-black/10 dark:border-white/[0.15] last:border-t-0 md:hidden"></div>
+
+<style>
+</style>

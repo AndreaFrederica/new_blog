@@ -13,16 +13,17 @@ const config = profileConfig;
 <!--<div class="transition bg-[oklch(92%_0.01_var(&#45;&#45;hue))] dark:bg-black py-8 mt-4 mb-8 flex flex-col items-center justify-center px-6">-->
 <div class="transition border-dashed border-[oklch(85%_0.01_var(--hue))] dark:border-white/15 mb-12 flex flex-col items-center justify-center px-6">
     <div class="transition text-50 text-sm text-center">
-        <div>
-            <ImageWrapper src={config.footerImage || ""} alt="Profile Image of the Author" class="w-[50px] h-[50px] mx-auto mb-2 animate-spin-reverse rounded-full"></ImageWrapper>
-        </div>
+        <!-- <div>
+            <ImageWrapper src={config.footerImage || ""} alt="Profile Image of the Author" class="w-[50px] h-[50px] mx-auto mb-2  rounded-full"></ImageWrapper>
+        </div> -->
         &copy; <span id="copyright-year">{currentYear}</span> {profileConfig.name}. All Rights Reserved. |
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('rss.xml')}>RSS</a> |
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('sitemap-index.xml')}>Sitemap</a> | <br>
         Powered by
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://astro.build">Astro</a> &
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a><br>
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://beian.miit.gov.cn/">桂ICP备20000593号-1</a> | 
-        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=45030502000306">桂公网安备45030502000306</a>
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a> &
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/KenRouKoro/korostudio_dot_cn">Fuwari-Koro</a><br>
+        <!-- <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://beian.miit.gov.cn/">桂ICP备20000593号-1</a> | 
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=45030502000306">桂公网安备45030502000306</a> -->
     </div>
 </div>

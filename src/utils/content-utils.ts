@@ -4,11 +4,24 @@ import { i18n } from "@i18n/translation";
 import { getCategoryUrl } from "@utils/url-utils.ts";
 import { siteConfig } from "@/config";
 
+const POST_TYPE_TAG = "博文";
+
+function ensureTypeTag<T extends { data: { tags: string[] } }>(entries: T[], typeTag: string) {
+    for (const e of entries) {
+        const tags = Array.isArray(e.data.tags) ? e.data.tags : [];
+        if (!tags.includes(typeTag)) tags.push(typeTag);
+        e.data.tags = tags;
+    }
+}
+
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
 	const allBlogPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
+
+	// 统一为博文追加类型标签
+	ensureTypeTag(allBlogPosts as any, POST_TYPE_TAG);
 
 	const sorted = allBlogPosts.sort((a, b) => {
 		const dateA = new Date(a.data.published);
@@ -101,6 +114,8 @@ export async function getTagList(lang?: string): Promise<Tag[]> {
 		});
 	}
 
+	ensureTypeTag(allBlogPosts as any, POST_TYPE_TAG);
+
 	const countMap: { [key: string]: number } = {};
 	allBlogPosts.map((post: { data: { tags: string[] } }) => {
 		post.data.tags.map((tag: string) => {
@@ -134,6 +149,8 @@ export async function getCategoryList(lang?: string): Promise<Category[]> {
 			return import.meta.env.PROD ? data.draft !== true : true;
 		});
 	}
+
+	ensureTypeTag(allBlogPosts as any, POST_TYPE_TAG);
 	const count: { [key: string]: number } = {};
 	allBlogPosts.map((post: { data: { category: string | null } }) => {
 		if (!post.data.category) {
@@ -172,6 +189,7 @@ export async function getPostsByLanguage(lang: string) {
 	const allPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
+	ensureTypeTag(allPosts as any, POST_TYPE_TAG);
 	return allPosts.filter(post => {
 		const postLang = post.data.lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn";
 		return postLang === lang;
@@ -210,4 +228,63 @@ export function getPostLanguage(post: CollectionEntry<"posts">): string {
 // 获取支持的语言列表
 export function getSupportedLanguages(): string[] {
 	return siteConfig.supportedLangs || [];
+}
+
+// ---------------- Notes & Combined helpers ----------------
+export type NoteEntry = CollectionEntry<"notes">;
+
+export async function getNotesByLanguage(lang?: string) {
+	const allNotes = await getCollection("notes", ({ data }) => {
+		return import.meta.env.PROD ? data.draft !== true : true;
+	});
+	if (!lang) return allNotes;
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	return allNotes.filter((n) => (n.data.lang || defaultLang) === lang);
+}
+
+// uses existing Tag type above
+
+export async function getNoteTagList(lang?: string): Promise<Tag[]> {
+	const notes = await getNotesByLanguage(lang);
+	const countMap: { [key: string]: number } = {};
+	for (const n of notes) {
+		const tags = Array.isArray(n.data.tags) ? n.data.tags : [];
+		for (const t of tags) {
+			if (!countMap[t]) countMap[t] = 0;
+			countMap[t]++;
+		}
+	}
+	const keys = Object.keys(countMap).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+	return keys.map((k) => ({ name: k, count: countMap[k] }));
+}
+
+export async function getAllTagList(lang?: string): Promise<Tag[]> {
+	const posts = await getTagList(lang);
+	const notes = await getNoteTagList(lang);
+	const map: { [key: string]: number } = {};
+	for (const t of [...posts, ...notes]) map[t.name] = (map[t.name] || 0) + t.count;
+	const keys = Object.keys(map).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+	return keys.map((k) => ({ name: k, count: map[k] }));
+}
+
+// uses existing Category type above
+
+export async function getNoteCategoryList(lang?: string): Promise<Category[]> {
+	const notes = await getNotesByLanguage(lang);
+	const count: { [key: string]: number } = {};
+	for (const n of notes) {
+		const cat = (n.data.category && String(n.data.category).trim()) || i18n(I18nKey.uncategorized, lang);
+		count[cat] = (count[cat] || 0) + 1;
+	}
+	const lst = Object.keys(count).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+	return lst.map((c) => ({ name: c, count: count[c], url: "" }));
+}
+
+export async function getAllCategoryList(lang?: string): Promise<Category[]> {
+	const posts = await getCategoryList(lang);
+	const notes = await getNoteCategoryList(lang);
+	const map: { [key: string]: number } = {};
+	for (const c of [...posts, ...notes]) map[c.name] = (map[c.name] || 0) + c.count;
+	const keys = Object.keys(map).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+	return keys.map((k) => ({ name: k, count: map[k], url: "" }));
 }

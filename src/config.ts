@@ -11,7 +11,7 @@ import { LinkPreset } from "./types/config";
 
 export const siteConfig: SiteConfig = {
 	title: i18n(I18nKey.siteTitle),
-	subtitle: "KoroStudio",
+	subtitle: "AndreaFrederica-SirrusStudio",
 	lang: "zh_cn", // Language code, e.g. 'en', 'zh_cn', 'ja', etc.
 	defaultLang: "zh_cn", // 默认语言
 	supportedLangs: ["zh_cn", "en", "ja", "ru"], // 支持的语言列表
@@ -49,6 +49,7 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Home,
 		LinkPreset.Archive,
 		LinkPreset.About,
+		{ name: "随笔", url: "/notes" },
 		//{
 		//	name: "GitHub",
 		//	url: "https://github.com/saicaca/fuwari", // Internal links should not include the base path, as it is automatically added
@@ -60,31 +61,36 @@ export const navBarConfig: NavBarConfig = {
 export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/avatar.png", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	footerImage: "assets/images/icon.svg", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-	name: "Koro（科洛）",
-	bio: "Wearing white gloves can't be done for a revolution.        — Владимир Ильич Ленин",
+	name: "AndreaFrederica",
+	bio: "...",
 	links: [
+		// {
+		// 	name: "OSHWLab",
+		// 	icon: "simple-icons:opensourcehardware", // Visit https://icones.js.org/ for icon codes
+		// 	// You will need to install the corresponding icon set if it's not already included
+		// 	// `pnpm add @iconify-json/<icon-set-name>`
+		// 	url: "https://oshwlab.com/AndreaFrederica",
+		// },
 		{
-			name: "OSHWLab",
-			icon: "simple-icons:opensourcehardware", // Visit https://icones.js.org/ for icon codes
-			// You will need to install the corresponding icon set if it's not already included
-			// `pnpm add @iconify-json/<icon-set-name>`
-			url: "https://oshwlab.com/kenroukoro",
+			name: "Gitee",
+			icon: "simple-icons:gitee",
+			url: "https://gitee.com/gysdfhome",
 		},
-		{
-			name: "Pixiv",
-			icon: "fa6-brands:pixiv",
-			url: "https://www.pixiv.net/users/19920302",
-		},
+		// {
+		// 	name: "Pixiv",
+		// 	icon: "fa6-brands:pixiv",
+		// 	url: "https://www.pixiv.net/users/19920302",
+		// },
 		{
 			name: "GitHub",
 			icon: "fa6-brands:github",
-			url: "https://github.com/KenRouKoro",
+			url: "https://github.com/AndreaFrederica",
 		},
-		{
-			name: "Hugging Face",
-			icon: "simple-icons:huggingface",
-			url: "https://huggingface.co/KenRouKoro",
-		},
+		// {
+		// 	name: "Hugging Face",
+		// 	icon: "simple-icons:huggingface",
+		// 	url: "https://huggingface.co/AndreaFrederica",
+		// },
 	],
 };
 
