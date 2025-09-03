@@ -257,8 +257,6 @@ export async function getSortedPostsWithFallback(lang: string) {
 	} as Record<string, string[]>;
 
 	const groupKey = (e: CollectionEntry<"posts">) => {
-		const id = e.id as string | undefined;
-		if (id) return id.split("/").slice(0, -1).join("/");
 		return groupKeyFromSlug(e.slug);
 	};
 

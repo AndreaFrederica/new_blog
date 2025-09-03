@@ -113,8 +113,17 @@ export function pickLocalized<T extends { id: string; slug?: string; data?: any 
 
 // Derive a stable group key from a slug: 'guide/index' -> 'guide'
 export function groupKeyFromSlug(slug: string): string {
-  const parts = slug.split('/')
-  return parts.slice(0, -1).join('/')
+  // Example slugs:
+  //  - 'guide/index' -> 'guide/index'
+  //  - 'guide/index.en' -> 'guide/index'
+  //  - 'topic/vue-in-vsc' -> 'topic/vue-in-vsc'
+  //  - 'topic/vue-in-vsc.en' -> 'topic/vue-in-vsc'
+  const parts = slug.split('/');
+  const base = parts.pop() || '';
+  const dir = parts.join('/');
+  // remove trailing language suffix from base filename, e.g., '.en', '.zh_cn'
+  const normBase = base.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/, '');
+  return dir ? `${dir}/${normBase}` : normBase;
 }
 
 // Try to infer language of an entry:

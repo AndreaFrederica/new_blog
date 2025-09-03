@@ -45,8 +45,9 @@ const isCollapsed = tags.length >= 20;
 </WidgetLayout>
 
 <script>
+// @ts-nocheck
 // 更新标签控件标题的函数
-function updateTagsTitle(lang: string) {
+function updateTagsTitle(lang) {
     // 定义翻译映射
     const translations = {
         'zh_cn': '标签',
@@ -69,10 +70,11 @@ function updateTagsTitle(lang: string) {
 
 // 监听语言变化事件
 function setupTagsLanguageListener() {
-    window.addEventListener('languageChanged', (event: Event) => {
-        const customEvent = event as CustomEvent<{ lang?: string }>;
-        if (customEvent.detail?.lang) {
-            updateTagsTitle(customEvent.detail.lang);
+    window.addEventListener('languageChanged', (event) => {
+        /** @type {any} */
+        const ce = event;
+        if (ce && ce.detail && ce.detail.lang) {
+            updateTagsTitle(ce.detail.lang);
         }
     });
 }
@@ -82,19 +84,22 @@ document.addEventListener('DOMContentLoaded', () => {
     //console.log('[Sidebar/Tags] DOMContentLoaded');
     setupTagsLanguageListener();
 
-    type Params = { lang: string; defaultLang: string; scope: 'posts'|'notes'|'all' };
-    async function refreshTags(params: Params) {
+    /**
+     * @typedef {{ lang: string; defaultLang: string; scope: 'posts'|'notes'|'all' }} Params
+     */
+    /** @param {Params} params */
+    async function refreshTags(params) {
         try {
             const { lang, defaultLang, scope } = params;
             // prefer inline JSON embedded by server for this page
             const inlineEl = document.getElementById('sidebar-data');
-            type TagItem = { name: string; count: number };
-            let list: TagItem[] | undefined;
+            /** @type {{ name: string; count: number }[] | undefined} */
+            let list;
             if (inlineEl?.textContent) {
                 try {
                     const inline = JSON.parse(inlineEl.textContent);
                     //console.log('[Sidebar/Tags] using inline data', { inlineScope: inline?.scope, inlineLang: inline?.lang });
-                    list = Array.isArray(inline?.tags) ? inline.tags : undefined;
+                    list = Array.isArray(inline && inline.tags) ? inline.tags : undefined;
                 } catch { /* ignore */ }
             }
             if (!list) {
@@ -105,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!res.ok) return;
                 const data = await res.json();
                 //console.log('[Sidebar/Tags] payload meta', data?.meta);
-                list = data.tags || [];
+                list = (data && data.tags) || [];
             }
             
             if (!list) {
@@ -121,25 +126,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            function archiveBase(lang: string, def: string) {
+            function archiveBase(lang, def) {
                 return lang && lang !== def ? `/${lang}/archive` : `/archive`;
             }
 
-            function notesTagUrl(tag: string) {
+            function notesTagUrl(tag) {
                 return `/notes?tag=${encodeURIComponent(tag)}`;
             }
 
-            const html = list.map((t: TagItem) => {
+            const html = list.map((t) => {
                 const name = (t.name || '').trim();
+                if (!name) return '';
                 const href = scope === 'notes' ? notesTagUrl(name) : `${archiveBase(lang, defaultLang)}?tag=${encodeURIComponent(name)}`;
-                if (name && Math.random() < 0.02) //console.log('[Sidebar/Tags] sample item', { name, href, scope });
+                if (name && Math.random() < 0.02) {
+                    //console.log('[Sidebar/Tags] sample item', { name, href, scope });
+                }
                 return `<a href="${href}" aria-label="View all posts with the ${name} tag" class="btn-regular h-8 text-sm px-3">${name}</a>`;
             }).join('');
             container.innerHTML = html;
             const sidebar = document.getElementById('sidebar');
             if (sidebar) {
-                (sidebar as HTMLElement).setAttribute('data-scope', scope);
-                (sidebar as HTMLElement).setAttribute('data-lang', lang);
+                sidebar.setAttribute('data-scope', scope);
+                sidebar.setAttribute('data-lang', lang);
                 //console.log('[Sidebar/Tags] DOM updated, sidebar dataset', (sidebar as HTMLElement).dataset);
             }
         } catch (e) {
@@ -148,9 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // explicit event-driven update
-    window.addEventListener('sidebar:update', (e: Event) => {
-        const ce = e as CustomEvent<Params>;
-        if (ce?.detail) {
+    window.addEventListener('sidebar:update', (e) => {
+        /** @type {any} */
+        const ce = e;
+        if (ce && ce.detail) {
             //console.log('[Sidebar/Tags] sidebar:update', ce.detail);
             refreshTags(ce.detail);
         }
@@ -158,10 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // fallback initial from #page-state if no event yet
     const pageState = document.getElementById('page-state');
     if (pageState) {
-        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
-        const def = pageState.getAttribute('data-default-lang') || 'zh_cn';
-        const scope = (pageState.getAttribute('data-scope') || 'posts') as 'posts'|'notes'|'all';
-        refreshTags({ lang, defaultLang: def, scope });
+    const lang = pageState.getAttribute('data-lang') || 'zh_cn';
+    const def = pageState.getAttribute('data-default-lang') || 'zh_cn';
+    /** @type {'posts'|'notes'|'all'} */
+    const scope = /** @type {any} */ (pageState.getAttribute('data-scope') || 'posts');
+    refreshTags({ lang, defaultLang: def, scope });
     }
 });
 </script>

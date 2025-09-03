@@ -55,8 +55,9 @@ const isCollapsed = categories.length >= COLLAPSE_THRESHOLD;
 </WidgetLayout>
 
 <script>
+// @ts-nocheck
 // 更新分类控件标题的函数
-function updateCategoriesTitle(lang: string) {
+function updateCategoriesTitle(lang) {
     // 定义翻译映射
     const translations = {
         'zh_cn': '分类',
@@ -79,9 +80,9 @@ function updateCategoriesTitle(lang: string) {
 
 // 监听语言变化事件
 function setupCategoriesLanguageListener() {
-    window.addEventListener('languageChanged', (event: Event) => {
-        const customEvent = event as CustomEvent<{ lang?: string }>;
-        if (customEvent.detail?.lang) {
+    window.addEventListener('languageChanged', (event) => {
+        const customEvent = /** @type {CustomEvent<{ lang?: string }>} */ (event);
+        if (customEvent.detail && customEvent.detail.lang) {
             updateCategoriesTitle(customEvent.detail.lang);
         }
     });
@@ -92,19 +93,22 @@ document.addEventListener('DOMContentLoaded', () => {
     //console.log('[Sidebar/Categories] DOMContentLoaded');
     setupCategoriesLanguageListener();
 
-    type Params = { lang: string; defaultLang: string; scope: 'posts'|'notes'|'all' };
-    async function refreshCategories(params: Params) {
+    /**
+     * @typedef {{ lang: string; defaultLang: string; scope: 'posts'|'notes'|'all' }} Params
+     */
+    /** @param {Params} params */
+    async function refreshCategories(params) {
         try {
             const { lang, defaultLang, scope } = params;
             // prefer inline JSON embedded by server for this page
             const inlineEl = document.getElementById('sidebar-data');
-            type CategoryItem = { name: string; count: number };
-            let list: CategoryItem[] = [];
+        /** @type {{ name: string; count: number }[]} */
+        let list = [];
             if (inlineEl?.textContent) {
                 try {
                     const inline = JSON.parse(inlineEl.textContent);
                     //console.log('[Sidebar/Categories] using inline data', { inlineScope: inline?.scope, inlineLang: inline?.lang });
-                    list = Array.isArray(inline?.categories) ? inline.categories : [];
+            list = Array.isArray(inline && inline.categories) ? inline.categories : [];
                 } catch { /* ignore */ }
             }
             if (!list.length) {
@@ -115,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!res.ok) return;
                 const data = await res.json();
                 //console.log('[Sidebar/Categories] payload meta', data?.meta);
-                list = Array.isArray(data.categories) ? data.categories : [];
+                list = Array.isArray(data && data.categories) ? data.categories : [];
             }
             if (list) {
                 //console.log('[Sidebar/Categories] categories length', list.length, list.slice(0, 3));
@@ -129,11 +133,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            function archiveBase(lang: string, def: string) {
+            function archiveBase(lang, def) {
                 return lang && lang !== def ? `/${lang}/archive` : `/archive`;
             }
 
-            const html = (list ?? []).map((c: CategoryItem) => {
+            const html = (list || []).map((c) => {
                 const name = (c.name || '').trim();
                 const href = scope === 'notes' ? (name ? `/notes?category=${encodeURIComponent(name)}` : '/notes?uncategorized=true') : `${archiveBase(lang, defaultLang)}?${name ? `category=${encodeURIComponent(name)}` : 'uncategorized=true'}`;
                 if (name && c && (typeof c.count !== 'undefined')) {
@@ -155,8 +159,8 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = html;
             const sidebar = document.getElementById('sidebar');
             if (sidebar) {
-                (sidebar as HTMLElement).setAttribute('data-scope', scope);
-                (sidebar as HTMLElement).setAttribute('data-lang', lang);
+                sidebar.setAttribute('data-scope', scope);
+                sidebar.setAttribute('data-lang', lang);
                 //console.log('[Sidebar/Categories] DOM updated, sidebar dataset', (sidebar as HTMLElement).dataset);
             }
         } catch (e) {
@@ -166,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // explicit event-driven update
     window.addEventListener('sidebar:update', (e: Event) => {
-        const ce = e as CustomEvent<Params>;
-        if (ce?.detail) {
+    const ce = /** @type {CustomEvent<Params>} */ (e);
+    if (ce && ce.detail) {
             //console.log('[Sidebar/Categories] sidebar:update', ce.detail);
             refreshCategories(ce.detail);
         }
@@ -175,9 +179,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // fallback initial from #page-state if no event yet
     const pageState = document.getElementById('page-state');
     if (pageState) {
-        const lang = pageState.getAttribute('data-lang') || 'zh_cn';
-        const def = pageState.getAttribute('data-default-lang') || 'zh_cn';
-        const scope = (pageState.getAttribute('data-scope') || 'posts') as 'posts'|'notes'|'all';
-        refreshCategories({ lang, defaultLang: def, scope });
+    const lang = pageState.getAttribute('data-lang') || 'zh_cn';
+    const def = pageState.getAttribute('data-default-lang') || 'zh_cn';
+    /** @type {'posts'|'notes'|'all'} */
+    const scope = /** @type {any} */ (pageState.getAttribute('data-scope') || 'posts');
+    refreshCategories({ lang, defaultLang: def, scope });
     }
 });
