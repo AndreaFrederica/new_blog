@@ -20,7 +20,7 @@
     }
 
     a:not(.no-styling) {
-        @apply relative bg-none link font-medium text-[var(--primary)];
+        @apply relative bg-none font-medium text-[var(--primary)] underline underline-offset-4;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         border-radius: 0;
