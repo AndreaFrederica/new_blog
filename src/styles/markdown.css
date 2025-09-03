@@ -62,7 +62,10 @@
 
     .copy-btn {
         all: initial;
-        @apply btn-regular-dark opacity-0 shadow-lg shadow-black/50 absolute active:scale-90 h-8 w-8 top-3 right-3 text-sm transition-all ease-in-out z-20 cursor-pointer;
+        @apply inline-flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium
+               text-zinc-100 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700
+               opacity-0 shadow-lg shadow-black/50 absolute active:scale-90 h-8 w-8 top-3 right-3 
+               transition-all ease-in-out z-20 cursor-pointer;
     }
     .frame:hover .copy-btn {
         opacity: 1;
