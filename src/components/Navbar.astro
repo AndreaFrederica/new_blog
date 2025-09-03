@@ -2,6 +2,8 @@
 import { Icon } from "astro-icon/components";
 import { navBarConfig, siteConfig } from "../config";
 import { getLinkPresets } from "../constants/link-presets";
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
 import { LinkPreset, type NavBarLink } from "../types/config";
 import { getArchiveUrlWithLang, getHomeUrlWithLang } from "../utils/i18n-utils";
 import { url } from "../utils/url-utils";
@@ -21,6 +23,13 @@ let links: NavBarLink[] = navBarConfig.links.map(
 	(item: NavBarLink | LinkPreset): NavBarLink => {
 		if (typeof item === "number") {
 			return linkPresets[item];
+		}
+		// 动态处理Notes链接的国际化
+		if (item.url === "/notes") {
+			return {
+				...item,
+				name: i18n(I18nKey.notes, lang),
+			};
 		}
 		return item;
 	},
@@ -87,21 +96,25 @@ function updateNavbarText(lang: string) {
     const translations = {
         'zh_cn': {
             'home': '主页',
+            'notes': '随笔',
             'about': '关于',
             'archive': '归档'
         },
         'en': {
             'home': 'Home',
+            'notes': 'Notes',
             'about': 'About',
             'archive': 'Archive'
         },
         'ja': {
             'home': 'ホーム',
+            'notes': 'ノート',
             'about': 'について',
             'archive': 'アーカイブ'
         },
         'ru': {
             'home': 'Главная',
+            'notes': 'Заметки',
             'about': 'О нас',
             'archive': 'Архив'
         }
@@ -126,6 +139,10 @@ function updateNavbarText(lang: string) {
                 } else {
                     (link as HTMLAnchorElement).href = `/${lang}/`;
                 }
+            } else if (currentText === '随笔' || currentText === 'Notes' || currentText === 'ノート' || currentText === 'Заметки') {
+                textElement.firstChild.textContent = currentTranslations['notes'];
+                // notes链接不需要语言前缀，始终是/notes
+                (link as HTMLAnchorElement).href = '/notes';
             } else if (currentText === '关于' || currentText === 'About' || currentText === 'について' || currentText === 'О нас') {
                 textElement.firstChild.textContent = currentTranslations['about'];
                 // 更新链接
@@ -178,9 +195,10 @@ function loadButtonScript() {
 
 // 监听语言变化事件
 function setupLanguageListener() {
-    window.addEventListener('languageChanged', (event: any) => {
-        if (event.detail && event.detail.lang) {
-            updateNavbarText(event.detail.lang);
+    window.addEventListener('languageChanged', (event: Event) => {
+        const customEvent = event as CustomEvent<{ lang?: string }>;
+        if (customEvent.detail?.lang) {
+            updateNavbarText(customEvent.detail.lang);
         }
     });
 }

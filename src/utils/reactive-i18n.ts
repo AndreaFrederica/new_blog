@@ -1,5 +1,5 @@
 import type I18nKey from "@i18n/i18nKey";
-import { getTranslation, i18n } from "@i18n/translation";
+import { i18n } from "@i18n/translation";
 import { derived, writable } from "svelte/store";
 import { siteConfig } from "@/config";
 
@@ -80,8 +80,8 @@ export function createReactiveI18n() {
 
 		// 监听自定义语言变化事件
 		window.addEventListener("languageChanged", (event: Event) => {
-			const customEvent = event as CustomEvent;
-			if (customEvent.detail.lang) {
+			const customEvent = event as CustomEvent<{ lang?: string }>;
+			if (customEvent.detail?.lang) {
 				currentLangStore.set(customEvent.detail.lang);
 			}
 		});

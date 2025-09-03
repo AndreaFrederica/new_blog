@@ -1,11 +1,11 @@
 ---
+import I18nKey from "@i18n/i18nKey";
+import { i18n } from "@i18n/translation";
 import { getLanguageName, getLanguageSwitchUrl } from "@utils/i18n-utils";
 import { Icon } from "astro-icon/components";
 import { siteConfig } from "@/config";
 import { type NavBarLink } from "../../types/config";
 import { url } from "../../utils/url-utils";
-import { i18n } from "@i18n/translation";
-import I18nKey from "@i18n/i18nKey";
 
 interface Props {
 	links: NavBarLink[];
@@ -297,9 +297,10 @@ const shouldShowLangSwitcher =
 	});
 	
 	// 监听语言变化事件，更新UI状态
-	window.addEventListener('languageChanged', (event: any) => {
-		if (event.detail && event.detail.lang) {
-			updateNavMenuLanguageText(event.detail.lang);
+	window.addEventListener('languageChanged', (event: Event) => {
+		const ce = event as CustomEvent<{ lang?: string }>;
+		if (ce.detail?.lang) {
+			updateNavMenuLanguageText(ce.detail.lang);
 			updateNavMenuLanguageState();
 		}
 	});

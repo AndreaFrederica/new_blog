@@ -5,15 +5,23 @@ import Navbar from "@components/Navbar.astro";
 import SideBar from "@components/widget/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
+import type { Category as CategoryItem, Tag as TagItem } from "@/types/content";
 import ImageWrapper from "../components/misc/ImageWrapper.astro";
 import TOC from "../components/widget/TOC.astro";
 import { siteConfig } from "../config";
-import { getTagList, getNoteTagList, getAllTagList, getCategoryList, getNoteCategoryList, getAllCategoryList } from "../utils/content-utils";
 import {
 	BANNER_HEIGHT,
 	BANNER_HEIGHT_EXTEND,
 	MAIN_PANEL_OVERLAPS_BANNER_HEIGHT,
 } from "../constants/constants";
+import {
+	getAllCategoryList,
+	getAllTagList,
+	getCategoryList,
+	getNoteCategoryList,
+	getNoteTagList,
+	getTagList,
+} from "../utils/content-utils";
 import Layout from "./Layout.astro";
 
 interface Props {
@@ -23,7 +31,7 @@ interface Props {
 	lang?: string;
 	setOGTypeArticle?: boolean;
 	headings?: MarkdownHeading[];
-    scope?: 'posts' | 'notes' | 'all';
+	scope?: "posts" | "notes" | "all";
 }
 
 const {
@@ -33,7 +41,7 @@ const {
 	lang,
 	setOGTypeArticle,
 	headings = [],
-    scope = 'posts',
+	scope = "posts",
 } = Astro.props;
 const hasBannerCredit =
 	siteConfig.banner.enable && siteConfig.banner.credit.enable;
@@ -44,17 +52,17 @@ const mainPanelTop = siteConfig.banner.enable
 	: "5.5rem";
 
 // Precompute sidebar data for this page so the client can update without hitting API
-let sidebarTags: any[] = [];
-let sidebarCategories: any[] = [];
-if (scope === 'notes') {
-    sidebarTags = await getNoteTagList(lang);
-    sidebarCategories = await getNoteCategoryList(lang);
-} else if (scope === 'all') {
-    sidebarTags = await getAllTagList(lang);
-    sidebarCategories = await getAllCategoryList(lang);
+let sidebarTags: TagItem[] = [];
+let sidebarCategories: CategoryItem[] = [];
+if (scope === "notes") {
+	sidebarTags = await getNoteTagList(lang);
+	sidebarCategories = await getNoteCategoryList(lang);
+} else if (scope === "all") {
+	sidebarTags = await getAllTagList(lang);
+	sidebarCategories = await getAllCategoryList(lang);
 } else {
-    sidebarTags = await getTagList(lang);
-    sidebarCategories = await getCategoryList(lang);
+	sidebarTags = await getTagList(lang);
+	sidebarCategories = await getCategoryList(lang);
 }
 ---
 

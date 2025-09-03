@@ -1,0 +1,1434 @@
+<script>
+  import type { Repository, LanguageStats, GitHubUser } from "../types/github";
+
+  // 全局清理器，用于防止重复监听
+  let globalCleanup: (() => void) | null = null;
+  let activeWatchers: Set<string> = new Set();
+
+  // 清理函数
+  function cleanup() {
+    console.log("GitHubStats: Cleaning up previous watchers and listeners");
+    if (globalCleanup) {
+      globalCleanup();
+      globalCleanup = null;
+    }
+    activeWatchers.clear();
+  }
+
+  // 组件根容器：选取最新、已挂载并尽量与当前语言匹配的容器
+  function getRoot(): HTMLElement | null {
+    const all = Array.from(
+      document.querySelectorAll(".github-stats-container")
+    ) as HTMLElement[];
+    if (!all.length) return null;
+    const connected = all.filter((n) => n.isConnected);
+    if (!connected.length) return all[all.length - 1] as HTMLElement; // 兜底
+    // 优先匹配当前语言
+    const pathLang = (() => {
+      const path = window.location.pathname;
+      const m = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+      return m ? m[1].toLowerCase() : null;
+    })();
+    if (pathLang) {
+      const matchLang = connected.find(
+        (n) => n.getAttribute("data-lang")?.toLowerCase() === pathLang
+      );
+      if (matchLang) return matchLang;
+    }
+    // 取最后一个（最新渲染的）
+    return connected[connected.length - 1] as HTMLElement;
+  }
+
+  // 在组件内按 id 查询（可指定根容器，避免拿到旧节点）
+  function qid(id: string, root?: HTMLElement | null): HTMLElement | null {
+    const r = root ?? getRoot();
+    return r ? r.querySelector(`#${id}`) : null;
+  }
+
+  // 在组件内按 data-region 查询（可指定根容器）
+  function qregion(
+    name: string,
+    root?: HTMLElement | null
+  ): HTMLElement | null {
+    const r = root ?? getRoot();
+    return r ? r.querySelector(`[data-region="${name}"]`) : null;
+  }
+
+  // 从组件的 data 属性获取配置
+  function getUsername(): string {
+    const container = document.querySelector(".github-stats-container");
+    return container?.getAttribute("data-username") || "AndreaFrederica";
+  }
+
+  function shouldUseImageFallback(): boolean {
+    const container = document.querySelector(".github-stats-container");
+    return container?.getAttribute("data-use-image-fallback") === "true";
+  }
+
+  function getCurrentLang(): string {
+    // 首先尝试从组件的 data-lang 属性获取
+    const container = document.querySelector(".github-stats-container");
+    const dataLang = container?.getAttribute("data-lang");
+    if (dataLang) return dataLang;
+
+    // 然后尝试从 URL 路径提取
+    const path = window.location.pathname;
+    const match = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+    if (match) {
+      const lang = match[1].toLowerCase();
+      // 检查是否是支持的语言
+      const supportedLangs = ["zh_cn", "en", "ja", "ru"];
+      if (supportedLangs.includes(lang)) {
+        return lang;
+      }
+    }
+
+    // 默认返回中文
+    return "zh_cn";
+  }
+
+  // i18n 支持
+  const translations: Record<string, Record<string, string>> = {
+    zh_cn: {
+      publicRepos: "公开仓库",
+      followers: "关注者",
+      following: "正在关注",
+      joinedAt: "加入时间",
+      loadingStats: "正在加载统计信息...",
+      loadingLanguages: "正在加载语言分布...",
+      loadingRepos: "正在加载仓库列表...",
+      loadingCalendar: "正在加载 GitHub 贡献日历...",
+      loadFailed: "加载失败，请稍后重试",
+      retry: "重试",
+      apiLimited: "GitHub API 请求频率限制，请稍后再试",
+      usingImageMode: "API 受限，使用图片模式",
+      usingImageVersion: "使用图片版本",
+      viewFullRepos: "查看完整仓库列表",
+      visitGithub: "访问 GitHub",
+      noDescription: "暂无描述",
+      updatedAt: "更新于",
+      statsLoadFailed: "统计图片加载失败",
+      languageLoadFailed: "语言统计图片加载失败",
+      calendarLoadFailed: "贡献图表加载失败",
+    },
+    en: {
+      publicRepos: "Public Repos",
+      followers: "Followers",
+      following: "Following",
+      joinedAt: "Joined",
+      loadingStats: "Loading statistics...",
+      loadingLanguages: "Loading language distribution...",
+      loadingRepos: "Loading repository list...",
+      loadingCalendar: "Loading GitHub contribution calendar...",
+      loadFailed: "Load failed, please try again later",
+      retry: "Retry",
+      apiLimited: "GitHub API rate limit exceeded, please try again later",
+      usingImageMode: "API limited, using image mode",
+      usingImageVersion: "Using image version",
+      viewFullRepos: "View full repository list",
+      visitGithub: "Visit GitHub",
+      noDescription: "No description",
+      updatedAt: "Updated",
+      statsLoadFailed: "Stats image failed to load",
+      languageLoadFailed: "Language stats image failed to load",
+      calendarLoadFailed: "Contribution chart failed to load",
+    },
+    ja: {
+      publicRepos: "パブリックリポジトリ",
+      followers: "フォロワー",
+      following: "フォロー中",
+      joinedAt: "参加日",
+      loadingStats: "統計情報を読み込み中...",
+      loadingLanguages: "言語分布を読み込み中...",
+      loadingRepos: "リポジトリリストを読み込み中...",
+      loadingCalendar: "GitHubコントリビューションカレンダーを読み込み中...",
+      loadFailed: "読み込みに失敗しました。後でもう一度お試しください",
+      retry: "再試行",
+      apiLimited:
+        "GitHub APIのレート制限に達しました。後でもう一度お試しください",
+      usingImageMode: "API制限中、画像モードを使用",
+      usingImageVersion: "画像版を使用",
+      viewFullRepos: "完全なリポジトリリストを表示",
+      visitGithub: "GitHubにアクセス",
+      noDescription: "説明なし",
+      updatedAt: "更新日",
+      statsLoadFailed: "統計画像の読み込みに失敗",
+      languageLoadFailed: "言語統計画像の読み込みに失敗",
+      calendarLoadFailed: "コントリビューションチャートの読み込みに失敗",
+    },
+    ru: {
+      publicRepos: "Публичные репозитории",
+      followers: "Подписчики",
+      following: "Подписки",
+      joinedAt: "Дата регистрации",
+      loadingStats: "Загрузка статистики...",
+      loadingLanguages: "Загрузка распределения языков...",
+      loadingRepos: "Загрузка списка репозиториев...",
+      loadingCalendar: "Загрузка календаря вкладов GitHub...",
+      loadFailed: "Ошибка загрузки, попробуйте позже",
+      retry: "Повторить",
+      apiLimited: "Превышен лимит запросов GitHub API, попробуйте позже",
+      usingImageMode: "API ограничен, используется режим изображений",
+      usingImageVersion: "Используется версия изображения",
+      viewFullRepos: "Посмотреть полный список репозиториев",
+      visitGithub: "Посетить GitHub",
+      noDescription: "Без описания",
+      updatedAt: "Обновлено",
+      statsLoadFailed: "Не удалось загрузить изображение статистики",
+      languageLoadFailed: "Не удалось загрузить изображение статистики языков",
+      calendarLoadFailed: "Не удалось загрузить диаграмму вкладов",
+    },
+  };
+
+  function t(key: string): string {
+    const lang = getCurrentLang();
+    return translations[lang]?.[key] || translations["zh_cn"][key] || key;
+  }
+
+  // Cookie 管理功能
+  function setCookie(name: string, value: string, minutes: number = 60) {
+    const date = new Date();
+    date.setTime(date.getTime() + minutes * 60 * 1000);
+    const expires = "expires=" + date.toUTCString();
+    document.cookie = `${name}=${value};${expires};path=/`;
+  }
+
+  function getCookie(name: string): string | null {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(";");
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === " ") c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+
+  function shouldUseFallbackFromCookie(): boolean {
+    const fallbackMode = getCookie("github-stats-fallback-mode");
+    return fallbackMode === "true";
+  }
+
+  function setFallbackModeCookie() {
+    // 设置1小时的降级模式
+    setCookie("github-stats-fallback-mode", "true", 60);
+    console.log("Set fallback mode for 1 hour");
+  }
+
+  // 清除降级模式 cookie（成功加载 API 时调用）
+  function clearFallbackModeCookie() {
+    setCookie("github-stats-fallback-mode", "false", -1); // 立即过期
+    console.log("Cleared fallback mode cookie");
+  }
+
+  // GitHub API 封装
+  class GitHubAPI {
+    private baseUrl = "https://api.github.com";
+    private username: string;
+
+    constructor(username: string) {
+      this.username = username;
+    }
+
+    async fetchUser(): Promise<GitHubUser> {
+      try {
+        const response = await fetch(`${this.baseUrl}/users/${this.username}`, {
+          headers: {
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "GitHubStats-Component",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `GitHub API Error: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("GitHub user data loaded successfully:", data.login);
+        return data;
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        throw error;
+      }
+    }
+
+    async fetchRepos(): Promise<Repository[]> {
+      try {
+        const response = await fetch(
+          `${this.baseUrl}/users/${this.username}/repos?sort=stars&per_page=6`,
+          {
+            headers: {
+              Accept: "application/vnd.github.v3+json",
+              "User-Agent": "GitHubStats-Component",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `GitHub API Error: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log(`Loaded ${data.length} repositories`);
+        return data;
+      } catch (error) {
+        console.error("Failed to fetch repositories:", error);
+        throw error;
+      }
+    }
+
+    async fetchLanguages(repos: Repository[]): Promise<LanguageStats> {
+      const languageStats: LanguageStats = {};
+
+      // 只请求前3个仓库的语言统计，进一步节省 API 使用次数
+      for (const repo of repos.slice(0, 3)) {
+        try {
+          const response = await fetch(
+            `${this.baseUrl}/repos/${this.username}/${repo.name}/languages`,
+            {
+              headers: {
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "GitHubStats-Component",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            console.warn(
+              `Failed to fetch languages for ${repo.name}: ${response.status}`
+            );
+            continue;
+          }
+
+          const languages = await response.json();
+
+          for (const [lang, bytes] of Object.entries(languages)) {
+            languageStats[lang] =
+              (languageStats[lang] || 0) + (bytes as number);
+          }
+
+          // 添加延迟以避免触发速率限制
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        } catch (error) {
+          console.warn(`Failed to fetch languages for ${repo.name}:`, error);
+        }
+      }
+
+      return languageStats;
+    }
+  }
+
+  // 主要功能
+  async function initGitHubStats() {
+    console.log("initGitHubStats: Starting...");
+
+    const username = getUsername();
+    console.log("initGitHubStats: Username:", username);
+
+    const useImageFallback = shouldUseImageFallback();
+    console.log("initGitHubStats: useImageFallback:", useImageFallback);
+
+    // 检查 cookie 中的降级状态，如果在降级期内直接使用图片
+    if (shouldUseFallbackFromCookie()) {
+      console.log("Using image fallback mode from cookie (within 1 hour)");
+      startFallbackWatchers(username);
+      return;
+    }
+
+    // 如果配置为直接使用图片方案，跳过 API 请求
+    if (useImageFallback) {
+      console.log("Using image fallback mode directly");
+      startFallbackWatchers(username);
+      return;
+    }
+
+    console.log("initGitHubStats: Creating GitHubAPI instance...");
+    const api = new GitHubAPI(username);
+
+    console.log(`Initializing GitHub stats for user: ${username}`);
+
+    try {
+      // 显示加载状态
+      showLoadingState();
+
+      // 串行获取数据以节省 API 使用次数
+      console.log("Fetching user data...");
+      const user = await api.fetchUser();
+
+      console.log("User data loaded, rendering profile stats...");
+      renderProfileStats(user);
+
+      console.log("Fetching repositories...");
+      const repos = await api.fetchRepos();
+
+      console.log("Repositories loaded, rendering repo list...");
+      renderRepositories(repos);
+
+      // 获取并渲染语言统计（单独处理，失败不影响其他组件）
+      try {
+        console.log("Fetching language statistics...");
+        const languages = await api.fetchLanguages(repos);
+        renderLanguageChart(languages);
+      } catch (error) {
+        console.warn("Failed to load language statistics:", error);
+        showLanguageImageFallback(username);
+      }
+
+      // 加载 GitHub 贡献日历（单独处理）
+      try {
+        console.log("Loading GitHub calendar...");
+        loadGitHubCalendar(username);
+      } catch (error) {
+        console.warn("Failed to load GitHub calendar:", error);
+        showCalendarImageFallback(username);
+      }
+
+      console.log("GitHub stats initialization completed");
+
+      // API 成功，清除降级模式 cookie
+      clearFallbackModeCookie();
+    } catch (error: any) {
+      console.error("Failed to load GitHub stats:", error);
+
+      // 设置降级模式 cookie
+      setFallbackModeCookie();
+
+      // 检查是否是速率限制问题
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("403") || errorMessage.includes("rate limit")) {
+        console.log(
+          "Rate limit detected, using image fallback for all components"
+        );
+        startFallbackWatchers(username);
+      } else {
+        // 使用 GitHub 官方图片作为备选方案
+        console.log("API error detected, using image fallback");
+        startFallbackWatchers(username);
+      }
+    }
+  }
+
+  function renderProfileStats(user: GitHubUser) {
+    const container = qid("profile-stats") || qregion("profile-stats");
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="stat-item">
+        <span class="text-75">${t("publicRepos")}</span>
+        <span class="font-bold text-90">${user.public_repos}</span>
+      </div>
+      <div class="stat-item">
+        <span class="text-75">${t("followers")}</span>
+        <span class="font-bold text-90">${user.followers}</span>
+      </div>
+      <div class="stat-item">
+        <span class="text-75">${t("following")}</span>
+        <span class="font-bold text-90">${user.following}</span>
+      </div>
+      <div class="stat-item">
+        <span class="text-75">${t("joinedAt")}</span>
+        <span class="text-50">${new Date(user.created_at).getFullYear()}</span>
+      </div>
+    `;
+    container.setAttribute("data-loading", "false");
+  }
+
+  function renderRepositories(repos: Repository[]) {
+    const container = qid("repo-list") || qregion("repo-list");
+    if (!container) return;
+
+    container.innerHTML = repos
+      .map(
+        (repo) => `
+      <div class="repo-item cursor-pointer p-4 border border-black/10 dark:border-white/15 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition" onclick="window.open('${repo.html_url}', '_blank')">
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="font-bold text-90 hover:text-[var(--primary)] transition">${repo.name}</h4>
+          <div class="flex items-center gap-2 text-sm text-50">
+            <span>⭐ ${repo.stargazers_count}</span>
+            <span>🍴 ${repo.forks_count}</span>
+          </div>
+        </div>
+        <p class="text-sm text-75 mb-2">${repo.description || t("noDescription")}</p>
+        <div class="flex items-center gap-2 text-xs text-50">
+          ${repo.language ? `<span class="px-2 py-1 bg-[var(--primary)]/20 text-90 rounded">${repo.language}</span>` : ""}
+          <span>${t("updatedAt")} ${new Date(repo.updated_at).toLocaleDateString()}</span>
+        </div>
+      </div>
+    `
+      )
+      .join("");
+    container.setAttribute("data-loading", "false");
+  }
+
+  function renderLanguageChart(languages: LanguageStats) {
+    const container = qid("language-chart") || qregion("language-chart");
+    if (!container) return;
+
+    const total = Object.values(languages).reduce(
+      (sum: number, bytes: number) => sum + bytes,
+      0
+    );
+    const sortedLanguages = Object.entries(languages)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 8);
+
+    const colors = [
+      "oklch(0.65 0.12 var(--hue))",
+      "oklch(0.70 0.10 calc(var(--hue) + 60))",
+      "oklch(0.75 0.08 calc(var(--hue) + 120))",
+      "oklch(0.65 0.10 calc(var(--hue) + 180))",
+      "oklch(0.70 0.08 calc(var(--hue) + 240))",
+      "oklch(0.75 0.06 calc(var(--hue) + 300))",
+      "oklch(0.80 0.04 var(--hue))",
+      "oklch(0.60 0.08 var(--hue))",
+    ];
+
+    container.innerHTML = sortedLanguages
+      .map(([lang, bytes], index) => {
+        const percentage = (((bytes as number) / total) * 100).toFixed(1);
+        return `
+        <div class="mb-3">
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-90">${lang}</span>
+            <span class="text-75">${percentage}%</span>
+          </div>
+          <div class="language-bar h-2 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+            <div class="language-progress h-full rounded-full transition-all duration-300" 
+                 style="width: ${percentage}%; background-color: ${colors[index % colors.length]}">
+            </div>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+    container.setAttribute("data-loading", "false");
+  }
+
+  function loadGitHubCalendar(username: string) {
+    const container = qid("github-calendar") || qregion("calendar");
+    if (!container) return;
+
+    // 如果当前为降级模式或配置为图片模式，直接使用图片，不加载脚本
+    if (shouldUseFallbackFromCookie() || shouldUseImageFallback()) {
+      console.log(
+        "loadGitHubCalendar: in fallback/image mode, using image and skipping script load"
+      );
+      showCalendarImageFallback(username);
+      return;
+    }
+
+    // 显示加载状态
+    container.classList.add("image-frame");
+    container.innerHTML = `<div class="animate-pulse text-center py-4">${t("loadingCalendar")}</div>`;
+
+    // 设置更短的超时时间，快速降级到图片
+    const timeoutId = setTimeout(() => {
+      console.warn("GitHub calendar loading timeout, falling back to image");
+      showCalendarImageFallback(username);
+    }, 1500); // 缩短到1.5秒超时
+
+    // 检查是否已经加载过脚本
+    if (window.GitHubCalendar) {
+      clearTimeout(timeoutId);
+      initializeCalendar();
+      return;
+    }
+
+    // 尝试加载第三方库
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/github-calendar@latest/dist/github-calendar.min.js";
+    
+    // 增加更快的错误检测
+    script.timeout = 2000; // 2秒脚本加载超时
+    
+    const handleError = () => {
+      console.error("Failed to load GitHub calendar script, using image fallback");
+      clearTimeout(timeoutId);
+      showCalendarImageFallback(username);
+    };
+
+    script.onerror = handleError;
+    
+    // 添加加载超时检测
+    const scriptTimeoutId = setTimeout(() => {
+      console.warn("Script loading timeout, falling back to image");
+      handleError();
+    }, 1000); // 缩短到1秒
+
+    script.onload = () => {
+      clearTimeout(scriptTimeoutId);
+      if (typeof window.GitHubCalendar !== "undefined") {
+        clearTimeout(timeoutId);
+        initializeCalendar();
+      } else {
+        handleError();
+      }
+    };
+
+    function initializeCalendar() {
+      try {
+        // 清空容器准备加载，但保持 image-frame 类
+        if (!container) return;
+        container.innerHTML = "";
+        container.classList.add("image-frame");
+
+        // @ts-ignore
+        GitHubCalendar(container, username, {
+          responsive: true,
+          tooltips: true,
+          global_stats: false,
+        });
+
+        console.log("GitHub calendar loaded successfully");
+
+        // 检查加载结果
+        setTimeout(() => {
+          if (container.children.length > 0 && container.innerHTML.trim() !== "") {
+            container.classList.add("image-frame");
+            applyCalendarTextStyles(container);
+            console.log("GitHub calendar: background styling and text colors applied");
+          } else {
+            console.warn("GitHub calendar appears to be empty, using image fallback");
+            showCalendarImageFallback(username);
+          }
+        }, 500); // 缩短到0.5秒
+      } catch (error) {
+        console.error("Error initializing GitHub calendar:", error);
+        showCalendarImageFallback(username);
+      }
+    }
+
+    document.head.appendChild(script);
+
+    // 加载样式（如果加载失败也不影响）
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://unpkg.com/github-calendar@latest/dist/github-calendar-responsive.css";
+    link.onerror = () => {
+      console.warn("Failed to load GitHub calendar styles");
+    };
+    document.head.appendChild(link);
+  }
+
+  // 强制应用日历文本样式到动态生成的内容
+  function applyCalendarTextStyles(container: HTMLElement) {
+    const isDark = 
+      document.documentElement.getAttribute("data-theme") === "dark" ||
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    
+    const textColor = isDark ? "var(--white)" : "var(--black)";
+    
+    // 根据实际HTML结构查找所有文本元素
+    const textSelectors = [
+      // GitHub calendar 生成的文本元素
+      'span[data-view-component="true"]', // "Less", "More" 等
+      '.Link--muted', // "Learn how we count contributions" 链接
+      '.color-fg-muted', // 包含图例的容器
+      '.sr-only', // 屏幕阅读器文本
+      'span[aria-hidden="true"]', // 隐藏的span元素
+      // SVG 相关
+      'text',
+      '.js-calendar-graph text',
+      'text[text-anchor]',
+      'text[dy]',
+      'text[dx]',
+      // 其他可能的元素
+      '.ContributionCalendar-label',
+      '.ContributionCalendar-label span'
+    ];
+    
+    // 应用样式到所有匹配的元素
+    textSelectors.forEach(selector => {
+      const elements = container.querySelectorAll(selector);
+      elements.forEach((el: any) => {
+        if (el.tagName.toLowerCase() === 'text') {
+          // SVG text 元素使用 fill
+          el.style.setProperty('fill', textColor, 'important');
+        }
+        // 所有元素都设置 color
+        el.style.setProperty('color', textColor, 'important');
+      });
+    });
+    
+    // 特别处理 .color-fg-muted 容器内的所有子元素
+    const mutedContainers = container.querySelectorAll('.color-fg-muted');
+    mutedContainers.forEach((mutedContainer: any) => {
+      const allChildren = mutedContainer.querySelectorAll('*');
+      allChildren.forEach((child: any) => {
+        child.style.setProperty('color', textColor, 'important');
+      });
+    });
+    
+    console.log(`Applied calendar text styles with color: ${textColor} to calendar elements`);
+  }
+
+  function showError() {
+    const containers = ["profile-stats", "language-chart", "repo-list"];
+    containers.forEach((id) => {
+      const element = qid(id) || qregion(id);
+      if (element) {
+        element.innerHTML = `<div class="text-75 opacity-50 text-center py-4">${t("loadFailed")}</div>`;
+        addRetryButton(element);
+      }
+    });
+
+    // 显示日历错误
+    const calendarContainer = qid("github-calendar") || qregion("calendar");
+    if (calendarContainer) {
+      calendarContainer.innerHTML = `<div class="text-75 opacity-50 text-center py-4">${t("calendarLoadFailed")}</div>`;
+    }
+  }
+
+  function showLoadingState() {
+    const containers = [
+      {
+        id: "profile-stats",
+        content: `<div class="animate-pulse text-center py-4">${t("loadingStats")}</div>`,
+      },
+      {
+        id: "language-chart",
+        content: `<div class="animate-pulse text-center py-4">${t("loadingLanguages")}</div>`,
+      },
+      {
+        id: "repo-list",
+        content: `<div class="animate-pulse text-center py-4">${t("loadingRepos")}</div>`,
+      },
+    ];
+
+    containers.forEach(({ id, content }) => {
+      const element = qid(id) || qregion(id);
+      if (element) {
+        element.innerHTML = content;
+        element.setAttribute("data-loading", "true");
+      }
+    });
+  }
+
+  function showLanguageError() {
+    const element = qid("language-chart") || qregion("language-chart");
+    if (element) {
+      element.innerHTML = `<div class="text-75 opacity-50 text-center py-4">${t("languageLoadFailed")}</div>`;
+    }
+  }
+
+  function showCalendarError() {
+    const calendarContainer = qid("github-calendar") || qregion("calendar");
+    if (!calendarContainer) return;
+
+    // 先尝试图片降级
+    const username = getUsername();
+    if (username) {
+      showCalendarImageFallback(username);
+    } else {
+      calendarContainer.innerHTML = `<div class="text-75 opacity-50 text-center py-4">${t("calendarLoadFailed")}</div>`;
+    }
+  }
+
+  function showRateLimitError() {
+    const username = getUsername();
+
+    // 使用图片降级方案而不是仅显示错误信息
+    console.log("Rate limit detected, falling back to image solutions");
+
+    // 统计信息降级到图片
+    const profileStats = qid("profile-stats") || qregion("profile-stats");
+    if (profileStats) {
+      const isDark =
+        document.documentElement.getAttribute("data-theme") === "dark" ||
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = isDark ? "dark" : "default";
+
+      profileStats.innerHTML = `
+        <div class="text-center">
+          <div class="text-xs text-75 opacity-75 mb-2">${t("usingImageMode")}</div>
+          <img src="https://github-readme-stats.vercel.app/api?username=${username}&show_icons=true&theme=${theme}&hide_border=true&bg_color=00000000" 
+               alt="GitHub Stats" 
+               class="w-full max-w-md mx-auto"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <div class="text-75 opacity-50 py-4" style="display: none;">${t("statsLoadFailed")}</div>
+        </div>
+      `;
+    }
+
+    // 语言分布降级到图片
+    showLanguageImageFallback(username);
+
+    // 仓库列表提供 GitHub 链接
+    const repoList = qid("repo-list") || qregion("repo-list");
+    if (repoList) {
+      repoList.innerHTML = `
+        <div class="text-center py-4">
+          <div class="text-xs text-75 opacity-75 mb-2">${t("usingImageMode")}</div>
+          <a href="https://github.com/${username}?tab=repositories" 
+             target="_blank" 
+             class="inline-block px-4 py-2 bg-primary text-white rounded hover:opacity-80 transition">
+            ${t("visitGithub")}
+          </a>
+        </div>
+      `;
+    }
+
+    // 日历也降级到图片方案
+    showCalendarImageFallback(username);
+  }
+
+  // GitHub 官方图片备选方案
+  function showImageFallback(username: string, root?: HTMLElement | null) {
+    console.log("showImageFallback: Starting for username:", username);
+
+    // 检测当前主题
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark" ||
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = isDark ? "dark" : "default";
+
+    console.log("showImageFallback: Theme detected:", theme);
+
+    // 统计信息使用 GitHub 官方统计图片（多源回退）
+    const profileStats =
+      qid("profile-stats", root) || qregion("profile-stats", root);
+    if (profileStats) {
+      console.log("showImageFallback: Updating profile stats");
+      const sources = [
+        `https://github-readme-stats.vercel.app/api?username=${username}&show_icons=true&theme=${theme}&hide_border=true&bg_color=00000000`,
+        // 常用镜像（社区镜像）
+        `https://github-readme-stats-git-masterrstaa-rickstaa.vercel.app/api?username=${username}&show_icons=true&theme=${theme}&hide_border=true&bg_color=00000000`,
+      ];
+      renderImageWithFallback(
+        profileStats,
+        sources,
+        "GitHub Stats",
+        "w-full max-w-md mx-auto"
+      );
+    } else {
+      console.error("showImageFallback: profile-stats element not found");
+    }
+
+    // 语言与日历改由 watchers 分别等待并渲染，避免重复注入
+
+    // 仓库列表显示简单信息
+    const repoList = qid("repo-list", root) || qregion("repo-list", root);
+    if (repoList) {
+      console.log("showImageFallback: Updating repo list");
+      repoList.innerHTML = `
+        <div class="text-center py-4">
+          <div class="text-75 mb-2">查看完整仓库列表</div>
+          <a href="https://github.com/${username}?tab=repositories" 
+             target="_blank" 
+             class="inline-block px-4 py-2 bg-primary text-white rounded hover:opacity-80 transition">
+            访问 GitHub
+          </a>
+        </div>
+      `;
+    } else {
+      console.error("showImageFallback: repo-list element not found");
+    }
+
+    // 日历交由 watcher 渲染
+
+    console.log("showImageFallback: Completed");
+  }
+
+  function showLanguageImageFallback(
+    username: string,
+    root?: HTMLElement | null
+  ) {
+    console.log("showLanguageImageFallback: Starting for username:", username);
+    // 检测当前主题
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark" ||
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = isDark ? "dark" : "default";
+    const languageChart =
+      qid("language-chart", root) || qregion("language-chart", root);
+    if (languageChart) {
+      console.log("showLanguageImageFallback: Updating language chart");
+      const wrapper = document.createElement("div");
+      wrapper.className = "image-frame text-center";
+      const hint = document.createElement("div");
+      hint.className = "text-xs text-75 opacity-75 mb-2";
+      hint.textContent = t("usingImageVersion");
+      const imgContainer = document.createElement("div");
+      imgContainer.className = "w-full max-w-md mx-auto";
+      wrapper.appendChild(hint);
+      wrapper.appendChild(imgContainer);
+      languageChart.innerHTML = "";
+      languageChart.appendChild(wrapper);
+      const sources = [
+        `https://github-readme-stats.vercel.app/api/top-langs/?username=${username}&layout=compact&theme=${theme}&hide_border=true&bg_color=00000000`,
+        `https://github-readme-stats-git-masterrstaa-rickstaa.vercel.app/api/top-langs/?username=${username}&layout=compact&theme=${theme}&hide_border=true&bg_color=00000000`,
+      ];
+      renderImageInto(
+        imgContainer,
+        sources,
+        "Top Languages",
+        "w-full max-w-md mx-auto",
+        '<div class="text-75 opacity-50 py-4">语言统计加载失败</div>'
+      );
+      languageChart.setAttribute("data-loading", "false");
+    } else {
+      console.error(
+        "showLanguageImageFallback: language-chart element not found"
+      );
+    }
+  }
+
+  // 贡献日历图片降级（多源回退）
+  function showCalendarImageFallback(
+    username: string,
+    root?: HTMLElement | null
+  ) {
+    const container = qid("github-calendar", root) || qregion("calendar", root);
+    if (!container) return;
+    
+    console.log("showCalendarImageFallback: Starting for username:", username);
+    
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark" ||
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = isDark ? "github-dark" : "github";
+    const ghGreen = isDark ? "39d353" : "30a14e";
+    const bg = isDark ? "0d1117" : "ffffff";
+    const sources = [
+      // 活动图（透明背景在某些主题下会显示异常，这里提供不透明兜底版本）
+      `https://github-readme-activity-graph.vercel.app/graph?username=${username}&theme=${theme}&hide_border=true&bg_color=00000000`,
+      `https://github-readme-activity-graph.vercel.app/graph?username=${username}&theme=${theme}&hide_border=true&bg_color=${bg}`,
+      // ghchart 简洁版
+      `https://ghchart.rshah.org/${ghGreen}/${username}`,
+    ];
+    
+    // 直接创建图片容器，不显示"加载中..."
+    const wrap = document.createElement("div");
+    wrap.className = "image-frame text-center";
+    const imgBox = document.createElement("div");
+    imgBox.className = "overflow-x-auto";
+    wrap.appendChild(imgBox);
+    
+    // 清空容器并直接添加图片容器
+    container.innerHTML = "";
+    container.appendChild(wrap);
+    
+    renderImageInto(
+      imgBox,
+      sources,
+      "GitHub Activity",
+      "max-w-full h-auto mx-auto rounded-lg shadow-sm",
+      `<div class="text-red-500 text-center py-4">日历图片加载失败</div>`
+    );
+    container.setAttribute("data-loading", "false");
+  }
+
+  // 通用：把图片渲染到指定容器并按顺序回退
+  function renderImageInto(
+    target: HTMLElement,
+    sources: string[],
+    alt: string,
+    className: string,
+    errorHtml: string
+  ) {
+    const img = new Image();
+    let idx = 0;
+    img.alt = alt;
+    img.className = className;
+    img.loading = "lazy";
+    img.decoding = "async" as any;
+    img.referrerPolicy = "no-referrer";
+    const tryNext = () => {
+      if (idx >= sources.length) {
+        console.error(
+          "renderImageInto: exhausted all sources, rendering errorHtml"
+        );
+        target.innerHTML = errorHtml;
+        return;
+      }
+      const src = sources[idx++];
+      console.log("renderImageInto: try", src);
+      img.src = src;
+    };
+    img.onerror = () => {
+      console.warn("renderImageInto: image failed, trying next");
+      tryNext();
+    };
+    img.onload = () => {
+      console.log(
+        "renderImageInto: image loaded",
+        img.currentSrc || img.src,
+        `${img.naturalWidth}x${img.naturalHeight}`
+      );
+    };
+    target.innerHTML = "";
+    console.log("renderImageInto: append image into target", target);
+    target.appendChild(img);
+    tryNext();
+  }
+
+  // 语法糖：直接往容器节点渲染（向后兼容旧调用）
+  function renderImageWithFallback(
+    container: HTMLElement,
+    sources: string[],
+    alt: string,
+    className: string
+  ) {
+    const inner = document.createElement("div");
+    inner.className = "image-frame text-center";
+    const imgBox = document.createElement("div");
+    imgBox.className = "w-full max-w-md mx-auto";
+    inner.appendChild(imgBox);
+    container.innerHTML = "";
+    console.log("renderImageWithFallback: container ready", container);
+    container.appendChild(inner);
+    renderImageInto(
+      imgBox,
+      sources,
+      alt,
+      className,
+      '<div class="text-75 opacity-50 py-4">图片加载失败</div>'
+    );
+    container.setAttribute("data-loading", "false");
+  }
+
+  // 单区域监听：等某个容器出现后再渲染对应内容（用于初次加载与语言切换场景）
+  function ensureRegionAndRender(
+    regionId: string,
+    render: (root: HTMLElement) => void,
+    options?: { requireLoading?: boolean }
+  ) {
+    const getCurrentRoot = () => getRoot();
+    const getEl = (r?: HTMLElement | null) =>
+      (qid(regionId, r) || qregion(regionId, r)) as HTMLElement | null;
+    const hasLoadingTag = (el: HTMLElement | null) => {
+      if (!el) return false;
+      // 首选 data-loading 标记
+      const attr = el.getAttribute("data-loading");
+      if (attr === "true") return true;
+      // 兼容老的文本检测
+      const text = (el.textContent || "").toLowerCase();
+      return (
+        text.includes("loading") ||
+        text.includes("加载") ||
+        text.includes("読み込み") ||
+        text.includes("загрузка")
+      );
+    };
+    const isReady = () => {
+      const root = getCurrentRoot();
+      const el = getEl(root);
+      const baseReady = !!(el && el.isConnected && document.body.contains(el));
+      if (!baseReady) return false;
+      if (options?.requireLoading) {
+        // 只有当容器仍处于“Loading…”文本时才算首次 ready，避免命中过时内容
+        return hasLoadingTag(el);
+      }
+      return true;
+    };
+    const doRender = (why: string) => {
+      const root = getCurrentRoot();
+      const el = getEl(root);
+      console.log(
+        `ensureRegionAndRender: region ready (${why})`,
+        regionId,
+        el,
+        "root=",
+        root
+      );
+      // 使用双 rAF 等待 DOM 稳定，避免刚好被 Astro 替换
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const root2 = getCurrentRoot();
+          const el2 = getEl(root2);
+          if (el2 && el2.isConnected && root2) {
+            render(root2);
+            // 渲染后再 guard 一次：若渲染后又被替换回 Loading，则重新等待
+            setTimeout(() => {
+              const root3 = getCurrentRoot();
+              const el3 = getEl(root3);
+              if (options?.requireLoading && el3 && hasLoadingTag(el3)) {
+                console.warn(
+                  "ensureRegionAndRender: element went back to loading, but not re-watching to prevent infinite loops",
+                  regionId
+                );
+                // 不再重新监听，防止无限循环
+              }
+            }, 100);
+          } else {
+            console.warn(
+              "ensureRegionAndRender: element lost before render",
+              regionId
+            );
+          }
+        })
+      );
+    };
+    const watch = () => {
+      console.log("ensureRegionAndRender: waiting for region", regionId);
+      const intervalId = window.setInterval(() => {
+        if (isReady()) {
+          clearInterval(intervalId);
+          obs.disconnect();
+          doRender("interval");
+        }
+      }, 120);
+      const obs = new MutationObserver(() => {
+        if (isReady()) {
+          clearInterval(intervalId);
+          obs.disconnect();
+          doRender("observer");
+        }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    };
+    if (isReady()) {
+      doRender("immediate");
+    } else {
+      watch();
+    }
+  }
+
+  function startFallbackWatchers(username: string) {
+    console.log("startFallbackWatchers: waiting for regions");
+    ensureRegionAndRender(
+      "profile-stats",
+      (root) => {
+        console.log("startFallbackWatchers: rendering profile-stats");
+        showImageFallback(username, root);
+      },
+      { requireLoading: true }
+    );
+    ensureRegionAndRender(
+      "language-chart",
+      (root) => {
+        console.log("startFallbackWatchers: rendering language-chart");
+        showLanguageImageFallback(username, root);
+      },
+      { requireLoading: true }
+    );
+    ensureRegionAndRender("github-calendar", (root) => {
+      console.log("startFallbackWatchers: rendering github-calendar");
+      showCalendarImageFallback(username, root);
+    }, { requireLoading: true });
+    // repo-list 由 showImageFallback 一并处理；若需要单独处理可加 ensureRegionAndRender('repo-list', ...)
+  }
+
+  // 页面加载时初始化
+  document.addEventListener("DOMContentLoaded", () => {
+    // 添加重试按钮功能
+    addRetryFunctionality();
+
+    // 检查 cookie 中的降级状态和配置
+    const shouldUseImage = shouldUseImageFallback();
+    const shouldUseFallback = shouldUseFallbackFromCookie();
+
+    // 如果配置了直接使用图片，或者在降级期内，直接使用图片
+    if (shouldUseImage || shouldUseFallback) {
+      const reason = shouldUseImage ? "config" : "cookie fallback";
+      console.log(`Using image mode directly based on ${reason}`);
+      const username = getUsername();
+      // 等待容器就绪后再渲染，避免初次加载时 DOM 仍在渲染
+      startFallbackWatchers(username);
+    } else {
+      // 否则尝试 API 模式
+      initGitHubStats();
+    }
+
+    // 监听语言切换
+    setupLanguageChangeListener();
+    
+    // 添加页面级别的清理监听器
+    setupPageLifecycleListeners();
+  });
+
+  // 语言切换监听器
+  function setupLanguageChangeListener() {
+    let currentLang = getCurrentLang();
+    let isProcessingChange = false;
+
+    // 检查 URL 变化的函数
+    function checkLanguageChange() {
+      if (isProcessingChange) return; // 防止重复处理
+
+      const container = document.querySelector(".github-stats-container");
+      if (!container) return;
+
+      // 从 URL 路径提取语言
+      const pathLang = extractLanguageFromPath();
+
+      // 更新组件的 data-lang 属性
+      if (pathLang !== container.getAttribute("data-lang")) {
+        container.setAttribute("data-lang", pathLang);
+      }
+
+      const newLang = getCurrentLang();
+      if (newLang !== currentLang) {
+        console.log(`Language changed from ${currentLang} to ${newLang}`);
+        isProcessingChange = true;
+        currentLang = newLang;
+
+        // 立即清空加载状态，避免显示错误的语言
+        clearLoadingStates();
+
+        // 检查是否在降级期内或配置使用图片模式
+        const shouldUseFallback = shouldUseFallbackFromCookie();
+        const shouldUseImage = shouldUseImageFallback();
+
+        if (shouldUseFallback || shouldUseImage) {
+          const reason = shouldUseImage ? "config" : "cookie fallback";
+          console.log(`Using image fallback due to ${reason}`);
+          const username = getUsername();
+          if (username) {
+            // 等待新 DOM 稳定后再渲染，避免语言切换时容器被替换导致挂载失败
+            startFallbackWatchers(username);
+          }
+        } else {
+          // 重新初始化 API 模式，但使用更短的超时
+          console.log("Reinitializing GitHub stats for new language");
+          initGitHubStats(); // 使用现有函数
+        }
+
+        // 重置处理状态
+        setTimeout(() => {
+          isProcessingChange = false;
+        }, 500);
+      }
+    }
+
+    // 清空所有加载状态的函数
+    function clearLoadingStates() {
+      const loadingElements = [
+        "#profile-stats",
+        "#language-chart",
+        "#repo-list",
+        "#github-calendar",
+      ];
+
+      loadingElements.forEach((selector) => {
+        const element = document.querySelector(selector);
+        if (
+          element &&
+          (element.textContent?.includes("加载中") ||
+            element.textContent?.includes("Loading"))
+        ) {
+          element.innerHTML = `<div class="animate-pulse text-center py-4">${t("loading")}</div>`;
+        }
+      });
+    }
+
+    // 确保使用顶层的 ensureRegionAndRender/startFallbackWatchers
+
+    // 从 URL 路径提取语言的函数
+    function extractLanguageFromPath(): string {
+      const path = window.location.pathname;
+      const match = path.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
+      if (match) {
+        const lang = match[1].toLowerCase();
+        // 检查是否是支持的语言
+        const supportedLangs = ["zh_cn", "en", "ja", "ru"];
+        if (supportedLangs.includes(lang)) {
+          return lang;
+        }
+      }
+      return "zh_cn"; // 默认语言
+    }
+
+    // 初始检查
+    checkLanguageChange();
+
+    // 使用 MutationObserver 监听 data-lang 属性变化
+    const container = document.querySelector(".github-stats-container");
+    if (container) {
+      const observer = new MutationObserver(checkLanguageChange);
+      observer.observe(container, {
+        attributes: true,
+        attributeFilter: ["data-lang"],
+      });
+    }
+
+    // 监听 popstate 事件（浏览器前进后退）
+    window.addEventListener("popstate", () => {
+      setTimeout(checkLanguageChange, 100);
+    });
+
+    // 监听 pushstate 和 replacestate（SPA 导航）
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+      originalPushState.apply(history, args);
+      setTimeout(checkLanguageChange, 100);
+    };
+
+    history.replaceState = function (...args) {
+      originalReplaceState.apply(history, args);
+      setTimeout(checkLanguageChange, 100);
+    };
+  }
+
+  // 页面生命周期监听器 - 处理页面切换时的清理和重新初始化
+  function setupPageLifecycleListeners() {
+    console.log("Setting up page lifecycle listeners");
+    
+    // 监听页面可见性变化（页面切换、最小化等）
+    document.addEventListener("visibilitychange", () => {
+      const container = document.querySelector(".github-stats-container");
+      if (!container) return;
+      
+      if (document.hidden) {
+        console.log("Page hidden, cleaning up GitHub stats watchers");
+        // 页面隐藏时清理资源
+        if (globalCleanup) {
+          globalCleanup();
+        }
+      } else {
+        console.log("Page visible, reinitializing GitHub stats if needed");
+        // 页面重新可见时，检查是否需要重新初始化
+        setTimeout(() => {
+          const shouldReinit = Array.from(container.querySelectorAll('[data-loading="true"]')).length > 0;
+          if (shouldReinit) {
+            const shouldUseImage = shouldUseImageFallback();
+            const shouldUseFallback = shouldUseFallbackFromCookie();
+            
+            if (shouldUseImage || shouldUseFallback) {
+              const username = getUsername();
+              if (username) {
+                startFallbackWatchers(username);
+              }
+            } else {
+              initGitHubStats();
+            }
+          }
+        }, 100);
+      }
+    });
+    
+    // 监听beforeunload事件 - 页面卸载前清理
+    window.addEventListener("beforeunload", () => {
+      console.log("Page unloading, cleaning up GitHub stats resources");
+      if (globalCleanup) {
+        globalCleanup();
+      }
+    });
+    
+    // 监听pagehide事件 - 页面隐藏时清理（更可靠的清理时机）
+    window.addEventListener("pagehide", () => {
+      console.log("Page hiding, cleaning up GitHub stats resources");
+      if (globalCleanup) {
+        globalCleanup();
+      }
+    });
+    
+    // Astro特有：监听astro:page-load事件（页面加载完成）
+    document.addEventListener("astro:page-load", () => {
+      console.log("Astro page loaded, checking GitHub stats initialization");
+      setTimeout(() => {
+        const container = document.querySelector(".github-stats-container");
+        if (container) {
+          // 如果容器存在但没有内容，重新初始化
+          const hasContent = container.querySelector('#profile-stats, #github-calendar, #repo-list');
+          if (!hasContent) {
+            console.log("GitHub stats container found but empty, reinitializing");
+            const shouldUseImage = shouldUseImageFallback();
+            const shouldUseFallback = shouldUseFallbackFromCookie();
+            
+            if (shouldUseImage || shouldUseFallback) {
+              const username = getUsername();
+              if (username) {
+                startFallbackWatchers(username);
+              }
+            } else {
+              // 正常API调用情况，也需要重新初始化
+              console.log("Reinitializing GitHub stats with API calls");
+              initGitHubStats();
+            }
+          } else {
+            console.log("GitHub stats container already has content, skipping reinit");
+          }
+        }
+      }, 200);
+    });
+    
+    // Astro特有：监听astro:before-preparation事件（页面切换前）
+    document.addEventListener("astro:before-preparation", () => {
+      console.log("Astro before page preparation, cleaning up GitHub stats");
+      if (globalCleanup) {
+        globalCleanup();
+      }
+    });
+  }
+
+  // 添加重试功能
+  function addRetryFunctionality() {
+    const style = document.createElement("style");
+    style.textContent = `
+      .retry-button {
+        margin-top: 8px;
+        padding: 8px 16px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: opacity 0.2s;
+      }
+      .retry-button:hover {
+        opacity: 0.8;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // 添加重试按钮到错误信息中
+  function addRetryButton(container: HTMLElement) {
+    const button = document.createElement("button");
+    button.className = "retry-button";
+    button.textContent = t("retry");
+    button.onclick = () => {
+      initGitHubStats();
+    };
+    container.appendChild(button);
+  }
+
+  // 调试功能：添加清除降级模式的按钮（仅在开发环境）
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
+    const debugStyle = document.createElement("style");
+    debugStyle.textContent = `
+      .debug-clear-fallback {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 9999;
+        padding: 4px 8px;
+        background: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+      .debug-clear-fallback:hover {
+        opacity: 1;
+      }
+    `;
+    document.head.appendChild(debugStyle);
+
+    const debugButton = document.createElement("button");
+    debugButton.className = "debug-clear-fallback";
+    debugButton.textContent = "Clear Fallback";
+    debugButton.onclick = () => {
+      clearFallbackModeCookie();
+      console.log("Debug: Cleared fallback cookie, reloading...");
+      location.reload();
+    };
+    document.body.appendChild(debugButton);
+  }
+
+  // 底部的重复初始化已移除，统一使用上方的初始化逻辑
+</script>

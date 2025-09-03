@@ -11,7 +11,7 @@ const scope = Astro.props.scope ?? "posts";
 ---
 
 
-<WidgetLayout id="notes-nav" name="随笔导航" class={className} isCollapsed={false}>
+<WidgetLayout id="notes-nav" name="随笔导航" style="" class={className} isCollapsed={false}>
   <div id="notes-nav-list" class="flex flex-col gap-1"></div>
 </WidgetLayout>
 
@@ -32,7 +32,7 @@ const scope = Astro.props.scope ?? "posts";
   }
 
   function updateNotesNavDisplay() {
-  const nav = document.querySelector('[data-id="notes-nav"]');
+  const nav = document.querySelector<HTMLElement>('[data-id="notes-nav"]');
     const list = document.getElementById('notes-nav-list');
     const pageState = document.getElementById('page-state');
     const scope = pageState?.getAttribute('data-scope');

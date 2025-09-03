@@ -1,58 +1,122 @@
 ---
-import { getNotesWithFallback } from "@utils/content-utils.ts";
-import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { siteConfig } from "@/config";
 import NoteCard from "@components/NoteCard.astro";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { getNotesWithFallback } from "@utils/content-utils.ts";
+import { siteConfig } from "@/config";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
 
 let notes = await getNotesWithFallback();
 // 处理过滤参数 + 视图模式与分页
 const params = Astro.url.searchParams;
-const view = params.get('view') || 'pages'; // 'pages' | 'continuous'
+const view = params.get("view") || "pages"; // 'pages' | 'continuous'
 const PAGE_SIZE = 10;
-let currentPage = Math.max(1, Number(params.get('p') || '1'));
-const filterTags = params.getAll('tag');
-const filterCategories = params.getAll('category');
-const uncategorized = params.get('uncategorized');
+let currentPage = Math.max(1, Number(params.get("p") || "1"));
+const filterTags = params.getAll("tag");
+const filterCategories = params.getAll("category");
+const uncategorized = params.get("uncategorized");
 
 let filtered = notes;
 if (filterTags.length > 0) {
-  filtered = filtered.filter((n) => (n.data.tags || []).some((t: string) => filterTags.includes(t)));
+	filtered = filtered.filter((n) =>
+		(n.data.tags || []).some((t: string) => filterTags.includes(t)),
+	);
 }
 if (filterCategories.length > 0) {
-  filtered = filtered.filter((n) => n.data.category && filterCategories.includes(n.data.category));
+	filtered = filtered.filter(
+		(n) => n.data.category && filterCategories.includes(n.data.category),
+	);
 }
 if (uncategorized) {
-  filtered = filtered.filter((n) => !n.data.category);
+	filtered = filtered.filter((n) => !n.data.category);
 }
 
-const notesSorted = filtered.sort((a, b) => b.data.published.getTime() - a.data.published.getTime());
+const notesSorted = filtered.sort(
+	(a, b) => b.data.published.getTime() - a.data.published.getTime(),
+);
 
 let pageCount = 1;
 let listForRender = notesSorted;
-if (view === 'pages') {
-  pageCount = Math.max(1, Math.ceil(notesSorted.length / PAGE_SIZE));
-  if (currentPage > pageCount) currentPage = pageCount;
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-  listForRender = notesSorted.slice(start, end);
+if (view === "pages") {
+	pageCount = Math.max(1, Math.ceil(notesSorted.length / PAGE_SIZE));
+	if (currentPage > pageCount) currentPage = pageCount;
+	const start = (currentPage - 1) * PAGE_SIZE;
+	const end = start + PAGE_SIZE;
+	listForRender = notesSorted.slice(start, end);
 }
 
 function buildQuery(next: Record<string, string | number | undefined>) {
-  const q = new URLSearchParams(Astro.url.search);
-  Object.entries(next).forEach(([k,v]) => {
-    if (v === undefined || v === null || v === '') q.delete(k); else q.set(k, String(v));
-  });
-  const qs = q.toString();
-  return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
+	const q = new URLSearchParams(Astro.url.search);
+	Object.entries(next).forEach(([k, v]) => {
+		if (v === undefined || v === null || v === "") q.delete(k);
+		else q.set(k, String(v));
+	});
+	const qs = q.toString();
+	return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
 }
+
+const lang = siteConfig.defaultLang || siteConfig.lang;
+const notesTitle = i18n(I18nKey.notes, lang);
+const notesDescription =
+	lang === "zh_cn"
+		? "随笔记录与短文"
+		: lang === "en"
+			? "Notes and short articles"
+			: lang === "ja"
+				? "ノートと短い記事"
+				: "Заметки и короткие статьи";
+
+// 按钮文本翻译
+const paginationText =
+	lang === "zh_cn"
+		? "分页"
+		: lang === "en"
+			? "Pages"
+			: lang === "ja"
+				? "ページ"
+				: "Страницы";
+const continuousText =
+	lang === "zh_cn"
+		? "连续"
+		: lang === "en"
+			? "Continuous"
+			: lang === "ja"
+				? "連続"
+				: "Непрерывно";
+const pageIndicatorText =
+	lang === "zh_cn"
+		? "第"
+		: lang === "en"
+			? "Page"
+			: lang === "ja"
+				? "第"
+				: "Страница";
+const pageOfText =
+	lang === "zh_cn" ? "页" : lang === "en" ? "" : lang === "ja" ? "ページ" : "";
+const prevText =
+	lang === "zh_cn"
+		? "上一页"
+		: lang === "en"
+			? "Previous"
+			: lang === "ja"
+				? "前のページ"
+				: "Предыдущая";
+const nextText =
+	lang === "zh_cn"
+		? "下一页"
+		: lang === "en"
+			? "Next"
+			: lang === "ja"
+				? "次のページ"
+				: "Следующая";
 ---
-<MainGridLayout title="随笔 Notes" description="随笔记录与短文" setOGTypeArticle={false} scope="notes" lang={siteConfig.defaultLang || siteConfig.lang}>
+<MainGridLayout title={notesTitle} description={notesDescription} setOGTypeArticle={false} scope="notes" lang={lang}>
   <div class="flex items-center justify-between px-1 md:px-0 mb-3">
     <div class="flex gap-2">
-      <a id="notes-view-pages" data-no-swup href={buildQuery({ view: 'pages', p: 1 })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'pages'}]}>分页</a>
-      <a id="notes-view-continuous" data-no-swup href={buildQuery({ view: 'continuous', p: undefined })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'continuous'}]}>连续</a>
+      <a id="notes-view-pages" data-no-swup href={buildQuery({ view: 'pages', p: 1 })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'pages'}]}>{paginationText}</a>
+      <a id="notes-view-continuous" data-no-swup href={buildQuery({ view: 'continuous', p: undefined })} class:list={["btn-regular h-9 px-3", {"!bg-[var(--primary)] !text-white": view === 'continuous'}]}>{continuousText}</a>
     </div>
-    {view === 'pages' && <div id="notes-page-indicator" class="text-sm text-neutral-500 dark:text-neutral-400">第 {currentPage} / {pageCount} 页</div>}
+    {view === 'pages' && <div id="notes-page-indicator" class="text-sm text-neutral-500 dark:text-neutral-400">{lang === 'zh_cn' ? `第 ${currentPage} / ${pageCount} 页` : lang === 'en' ? `Page ${currentPage} / ${pageCount}` : lang === 'ja' ? `第${currentPage} / ${pageCount}ページ` : `Страница ${currentPage} / ${pageCount}`}</div>}
   </div>
   <div id="notes-list" class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
     {notesSorted.map((entry, idx) => (
@@ -72,9 +136,9 @@ function buildQuery(next: Record<string, string | number | undefined>) {
     ))}
   </div>
   <div id="notes-pager" class:list={["flex items-center justify-center gap-2 mb-6", {"hidden": !(view === 'pages' && pageCount > 1)}]}>
-    <a id="notes-prev" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage <= 1}]} href={buildQuery({ p: Math.max(1, currentPage-1) })}>上一页</a>
+    <a id="notes-prev" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage <= 1}]} href={buildQuery({ p: Math.max(1, currentPage-1) })}>{prevText}</a>
     <div id="notes-pi" class="text-sm text-neutral-500 dark:text-neutral-400">{currentPage} / {pageCount}</div>
-    <a id="notes-next" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage >= pageCount}]} href={buildQuery({ p: Math.min(pageCount, currentPage+1) })}>下一页</a>
+    <a id="notes-next" data-no-swup class:list={["btn-regular h-9 px-3", {"pointer-events-none opacity-50": currentPage >= pageCount}]} href={buildQuery({ p: Math.min(pageCount, currentPage+1) })}>{nextText}</a>
   </div>
   <script is:inline define:vars={{ PAGE_SIZE }}>
     function getParams() {

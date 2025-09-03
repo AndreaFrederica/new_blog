@@ -41,7 +41,11 @@ const currentLang = lang || extractLangFromUrl(Astro.url.pathname);
 const postUrl = decodeURIComponent(Astro.url.toString());
 
 const licenseObj = getLicenseConfig(currentLang);
-let licenseConf;
+interface LicenseConf {
+	name: string;
+	url: string;
+}
+let licenseConf: LicenseConf;
 if (propLicenseId) {
 	const licObj = getLicenseById(propLicenseId);
 	if (licObj) {
@@ -93,7 +97,8 @@ function localizeUrl(url?: string, currentLang?: string) {
 const defaultId = licenseObj.id || "all_rights_reserved";
 const fallbackUrl =
 	(licenseObj.url || "").trim() || (getLicenseUrl(defaultId) || "").trim();
-licenseConf.url = localizeUrl(licenseConf.url || fallbackUrl, currentLang);
+licenseConf.url =
+	localizeUrl(licenseConf.url || fallbackUrl, currentLang) || "";
 ---
 <div class={`relative transition overflow-hidden bg-[var(--license-block-bg)] py-5 px-6 ${className}`}>
     <div class="transition font-bold text-black/75 dark:text-white/75">
@@ -175,9 +180,10 @@ function updateLicenseText(lang: string) {
 
 // 监听语言变化事件
 function setupLicenseLanguageListener() {
-    window.addEventListener('languageChanged', (event: any) => {
-        if (event.detail && event.detail.lang) {
-            updateLicenseText(event.detail.lang);
+    window.addEventListener('languageChanged', (event: Event) => {
+        const customEvent = event as CustomEvent<{ lang?: string }>;
+        if (customEvent.detail?.lang) {
+            updateLicenseText(customEvent.detail.lang);
         }
     });
 }

@@ -2,67 +2,70 @@
 import fs from "node:fs/promises";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getLicenseById, licenses } from "../../../licenses";
-import { siteConfig } from "../../../config";
 import markdownIt from "markdown-it";
+import { siteConfig } from "../../../config";
+import { getLicenseById, licenses } from "../../../licenses";
 
 export function getStaticPaths() {
-  const supported = siteConfig.supportedLangs || ["en"];
-  const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-  const langs = supported.filter((l) => l !== defaultLang);
-  const paths: any[] = [];
-  for (const lang of langs) {
-    for (const l of licenses) paths.push({ params: { lang, id: l.id } });
-  }
-  return paths;
+	const supported = siteConfig.supportedLangs || ["en"];
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	const langs = supported.filter((l) => l !== defaultLang);
+	const paths: { params: { lang: string; id: string } }[] = [];
+	for (const lang of langs) {
+		for (const l of licenses) paths.push({ params: { lang, id: l.id } });
+	}
+	return paths;
 }
 
 const { lang, id } = Astro.params as { lang: string; id: string };
 const lic = id ? getLicenseById(id) : undefined;
 
 if (!lic) {
-  return Astro.redirect("/404");
+	return Astro.redirect("/404");
 }
 
 // i18n-aware doc resolution: try current lang, generic, default lang, then any available language
 async function resolveMarkdownHtml(licenseId: string, currentLang: string) {
-  const supported = siteConfig.supportedLangs || ["en"]; // order matters
-  const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-  const candidates: string[] = [];
-  // current language first
-  candidates.push(`${licenseId}_${currentLang}.md`);
-  // generic
-  candidates.push(`${licenseId}.md`);
-  // default language next
-  if (currentLang !== defaultLang) candidates.push(`${licenseId}_${defaultLang}.md`);
-  // other supported languages
-  for (const l of supported) {
-    if (l !== currentLang && l !== defaultLang) candidates.push(`${licenseId}_${l}.md`);
-  }
-  // scan directory to include any existing variants
-  const licensesDir = new URL(`../../../licenses/`, import.meta.url);
-  try {
-    const files = await fs.readdir(licensesDir);
-    for (const f of files) {
-      if (f.startsWith(`${licenseId}_`) && f.endsWith(`.md`)) candidates.push(f);
-    }
-  } catch {}
-  // de-dup
-  const seen = new Set<string>();
-  const uniq = candidates.filter((f) => {
-    if (seen.has(f)) return false;
-    seen.add(f);
-    return true;
-  });
-  for (const file of uniq) {
-    try {
-      const mdUrl = new URL(`../../../licenses/${file}`, import.meta.url);
-      const content = await fs.readFile(mdUrl, "utf-8");
-      const md = markdownIt({ html: true, linkify: true, breaks: false });
-      return md.render(content);
-    } catch {}
-  }
-  return `<p>License document not found.</p>`;
+	const supported = siteConfig.supportedLangs || ["en"]; // order matters
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	const candidates: string[] = [];
+	// current language first
+	candidates.push(`${licenseId}_${currentLang}.md`);
+	// generic
+	candidates.push(`${licenseId}.md`);
+	// default language next
+	if (currentLang !== defaultLang)
+		candidates.push(`${licenseId}_${defaultLang}.md`);
+	// other supported languages
+	for (const l of supported) {
+		if (l !== currentLang && l !== defaultLang)
+			candidates.push(`${licenseId}_${l}.md`);
+	}
+	// scan directory to include any existing variants
+	const licensesDir = new URL("../../../licenses/", import.meta.url);
+	try {
+		const files = await fs.readdir(licensesDir);
+		for (const f of files) {
+			if (f.startsWith(`${licenseId}_`) && f.endsWith(".md"))
+				candidates.push(f);
+		}
+	} catch {}
+	// de-dup
+	const seen = new Set<string>();
+	const uniq = candidates.filter((f) => {
+		if (seen.has(f)) return false;
+		seen.add(f);
+		return true;
+	});
+	for (const file of uniq) {
+		try {
+			const mdUrl = new URL(`../../../licenses/${file}`, import.meta.url);
+			const content = await fs.readFile(mdUrl, "utf-8");
+			const md = markdownIt({ html: true, linkify: true, breaks: false });
+			return md.render(content);
+		} catch {}
+	}
+	return "<p>License document not found.</p>";
 }
 
 const html = await resolveMarkdownHtml(lic.id, lang);

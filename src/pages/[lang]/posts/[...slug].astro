@@ -84,6 +84,8 @@ const jsonLd = {
 		: siteConfig.lang.replace("_", "-"),
 	// TODO include cover image here
 };
+
+const licenseObj = getLicenseConfig(lang || siteConfig.lang || "zh_cn");
 ---
 <MainGridLayout banner={entry.data.image} title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings} scope="posts">
     <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
@@ -151,9 +153,6 @@ const jsonLd = {
             <Markdown class="mb-6 markdown-content onload-animation">
                 <Content />
             </Markdown>
-
-
-            const licenseObj = getLicenseConfig(lang || siteConfig.lang || "zh_cn");
 
             {licenseObj.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation"></License>}
 

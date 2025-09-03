@@ -15,7 +15,9 @@ export async function getStaticPaths() {
 	}));
 }
 
-const { entry } = Astro.props as { entry: any };
+import type { NoteEntry } from "@/types/content";
+
+const { entry } = Astro.props as { entry: NoteEntry };
 const { Content, headings } = await entry.render();
 // tags 已在 helper 中保证包含“随笔”
 const noteTags: string[] = Array.isArray(entry.data.tags)
@@ -33,7 +35,7 @@ const licenseObj = getLicenseConfig(entry.data.lang || "zh_cn");
       </div>
 
       <div class="onload-animation">
-        <PostMetadata class="mb-5" published={entry.data.published} updated={entry.data.updated} tags={noteTags} category={entry.data.category} categoryUrlBase="notes" licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} lang={entry.data.lang} />
+  <PostMetadata class="mb-5" published={entry.data.published ?? new Date(0)} updated={entry.data.updated} tags={noteTags} category={entry.data.category} categoryUrlBase="notes" licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} lang={entry.data.lang} />
         <div class="border-[var(--line-divider)] border-dashed border-b-[1px] mb-5"></div>
       </div>
 
@@ -41,7 +43,7 @@ const licenseObj = getLicenseConfig(entry.data.lang || "zh_cn");
         <Content />
       </Markdown>
 
-  {licenseObj.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation" />}
+  {licenseObj.enable && <License title={entry.data.title} slug={entry.slug} pubDate={entry.data.published ?? new Date(0)} lang={entry.data.lang} license={entry.data.license} licenseName={entry.data.license} licenseUrl={entry.data.licenseUrl} class="mb-6 license-container onload-animation" />}
     </div>
   </div>
 </MainGridLayout>

@@ -36,10 +36,10 @@ const {
 const className = Astro.props.class;
 
 const { Content, remarkPluginFrontmatter } = await entry.render();
-const langCode = (entry.data as any)?.lang || siteConfig.lang || "zh_cn";
+const langCode = entry.data.lang || siteConfig.lang || "zh_cn";
 const licenseObj = getLicenseConfig(langCode);
-let licenseName = (entry.data as any)?.license || licenseObj.name;
-let licenseUrl = (entry.data as any)?.licenseUrl ?? (licenseObj.url || "");
+let licenseName = entry.data.license || licenseObj.name;
+let licenseUrl = entry.data.licenseUrl ?? (licenseObj.url || "");
 
 // Resolve predefined license ids to display name/url
 if (licenseName) {
@@ -50,7 +50,7 @@ if (licenseName) {
 			licObj.name["zh_cn"] ||
 			licObj.name["en"] ||
 			licObj.id;
-		if (!(entry.data as any)?.licenseUrl) licenseUrl = licObj.url;
+		if (!entry.data.licenseUrl) licenseUrl = licObj.url;
 	}
 }
 // default to site default preset url when still empty
@@ -78,15 +78,17 @@ const displayTags: string[] = Array.isArray(tags)
 	: [];
 ---
 <div class:list={["card-base flex w-full overflow-hidden relative note-card", className]} style={style}>
-    <div class="pl-6 md:pl-9 pr-6 md:pr-6 pt-6 md:pt-7 pb-6 relative w-full">
-        <a href={url}
-           class="transition group relative w-full block font-bold mb-3 text-3xl text-90
-        hover:text-[var(--primary)] dark:hover:text-[var(--primary)]
-        active:text-[var(--title-active)] dark:active:text-[var(--title-active)]
-        md:before:w-1 before:h-5 before:bg-[var(--primary)]
-        before:absolute before:top-[0.75rem] before:left-[-1.125rem] before:hidden md:before:block
-        ">
-            {title}
+    <div class="pl-6 md:pl-9 pr-6 md:pr-6 pt-6 md:pt-7 pb-6 relative w-full flex">
+        <!-- Decorative bar -->
+        <div class="hidden md:block w-1 h-5 bg-[var(--primary)] mr-4 mt-2 flex-shrink-0"></div>
+        
+        <div class="flex-1">
+            <a href={url}
+               class="transition group w-full block font-bold mb-3 text-3xl text-90
+            hover:text-[var(--primary)] dark:hover:text-[var(--primary)]
+            active:text-[var(--title-active)] dark:active:text-[var(--title-active)]
+            ">
+                {title}
             <Icon class="inline text-[2rem] text-[var(--primary)] md:hidden translate-y-0.5 absolute" name="material-symbols:chevron-right-rounded" />
             <Icon class="text-[var(--primary)] text-[2rem] transition hidden md:inline absolute translate-y-0.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0" name="material-symbols:chevron-right-rounded" />
         </a>

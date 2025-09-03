@@ -113,6 +113,16 @@ export function getTagUrlWithLang(tag: string, lang?: string): string {
 }
 
 /**
+ * 获取随笔标签页面的URL路径
+ */
+export function getNotesTagUrl(tag: string): string {
+	if (!tag) {
+		return "/notes";
+	}
+	return `/notes?tag=${encodeURIComponent(tag.trim())}`;
+}
+
+/**
  * 获取归档页面的URL路径
  */
 export function getArchiveUrlWithLang(lang?: string): string {

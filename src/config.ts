@@ -47,7 +47,7 @@ export const siteConfig: SiteConfig = {
 export const navBarConfig: NavBarConfig = {
 	links: [
 		LinkPreset.Home,
-		{ name: i18n(I18nKey.notes), url: "/notes" },
+		{ name: "Notes", url: "/notes" }, // 这里会被动态替换
 		LinkPreset.Archive,
 		LinkPreset.About,
 
