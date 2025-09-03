@@ -2,7 +2,13 @@
     "id": "cc_by_nc_4_0",
     "name": {
         "zh_cn": "知识共享署名-非商业性使用 4.0 国际 (CC BY-NC 4.0)",
-        "en": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)"
+        "en": "Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)",
+        "ja": "クリエイティブ・コモンズ 表示-非営利 4.0 国際 (CC BY-NC 4.0)",
+        "ru": "Creative Commons Лицензия с указанием авторства — Некоммерческая 4.0 Международная (CC BY-NC 4.0)"
     },
-    "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    "url": "/license/cc_by_nc_4_0",
+    "doc": "cc_by_nc_4_0_zh_cn.md",
+    "icon": "🅭🅯",
+    "badge": "https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg",
+    "official_url": "https://creativecommons.org/licenses/by-nc/4.0/"
 }

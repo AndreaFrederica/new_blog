@@ -1,0 +1,14 @@
+{
+    "id": "mpl_2_0",
+    "name": {
+        "zh_cn": "Mozilla公共许可证 2.0 (MPL 2.0)",
+        "en": "Mozilla Public License 2.0 (MPL 2.0)",
+        "ja": "Mozilla パブリックライセンス 2.0 (MPL 2.0)",
+        "ru": "Публичная лицензия Mozilla 2.0 (MPL 2.0)"
+    },
+    "url": "/license/mpl_2_0",
+    "doc": "mpl_2_0_zh_cn.md",
+    "icon": "🦎",
+    "badge": "https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg",
+    "official_url": "https://mozilla.org/MPL/2.0/"
+}

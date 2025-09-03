@@ -1,0 +1,11 @@
+{
+    "id": "gfdl_1_3",
+    "name": {
+        "zh_cn": "GNU自由文档许可证 1.3 (GFDL 1.3)",
+        "en": "GNU Free Documentation License 1.3 (GFDL 1.3)",
+        "ja": "GNU フリー文書利用許諾契約書 1.3 (GFDL 1.3)",
+        "ru": "Лицензия свободной документации GNU 1.3 (GFDL 1.3)"
+    },
+    "url": "/license/gfdl_1_3",
+    "doc": "gfdl_1_3_zh_cn.md"
+}

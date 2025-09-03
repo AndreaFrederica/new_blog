@@ -1,0 +1,106 @@
+/* License info styling for code blocks */
+.code-license-info {
+  @apply flex items-center gap-2 px-3 py-2 mb-2 text-sm;
+  @apply bg-neutral-100 dark:bg-neutral-800;
+  @apply border border-neutral-200 dark:border-neutral-700;
+  @apply rounded-t-lg;
+  @apply text-neutral-700 dark:text-neutral-300;
+}
+
+.code-license-info + pre {
+  @apply rounded-t-none;
+}
+
+.license-icon {
+  @apply text-base;
+}
+
+.license-badge {
+  @apply h-5 w-auto;
+}
+
+.license-link {
+  @apply text-neutral-700 dark:text-neutral-300;
+  @apply hover:text-blue-600 dark:hover:text-blue-400;
+  @apply transition-colors duration-200;
+  @apply no-underline;
+}
+
+.license-link:hover {
+  @apply underline;
+}
+
+.license-text {
+  @apply text-neutral-600 dark:text-neutral-400;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .code-license-info {
+    @apply text-xs px-2 py-1;
+  }
+
+  .license-badge {
+    @apply h-4;
+  }
+}
+
+.code-license-info .license-badge {
+  height: 1.25rem;
+  margin-left: auto;
+}
+
+.code-license-info .official-link {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #2563eb;
+}
+
+.dark .code-license-info .official-link {
+  color: #60a5fa;
+}
+
+.code-license-info .official-link:hover {
+  text-decoration: underline;
+}
+
+/* Ensure license info appears above code blocks */
+.code-license-info + pre {
+  margin-top: 0;
+}
+
+/* Alternative compact license display */
+.code-license-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  background-color: #f3f4f6;
+  border-radius: 0.25rem;
+}
+
+.dark .code-license-compact {
+  background-color: #374151;
+}
+
+.code-license-compact .license-icon {
+  font-size: 0.875rem;
+}
+
+.code-license-compact .license-link {
+  color: #4b5563;
+  text-decoration: none;
+}
+
+.dark .code-license-compact .license-link {
+  color: #d1d5db;
+}
+
+.code-license-compact .license-link:hover {
+  color: #1f2937;
+}
+
+.dark .code-license-compact .license-link:hover {
+  color: #f9fafb;
+}

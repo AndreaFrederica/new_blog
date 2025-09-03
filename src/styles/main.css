@@ -1,3 +1,4 @@
+@import "./license.css";
 @tailwind components;
 
 @layer components {

@@ -83,4 +83,8 @@ export const ja: Translation = {
 	[Key.languageEn]: "英語",
 	[Key.languageJa]: "日本語",
 	[Key.languageRu]: "ロシア語",
+
+	[Key.licenses]: "ライセンス",
+	[Key.availableLicenses]: "利用可能なライセンス",
+	[Key.containsDetailedDocumentation]: "詳細なドキュメントが含まれています",
 };

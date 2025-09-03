@@ -82,4 +82,8 @@ export const ru: Translation = {
 	[Key.languageEn]: "Английский",
 	[Key.languageJa]: "Японский",
 	[Key.languageRu]: "Русский",
+
+	[Key.licenses]: "Лицензии",
+	[Key.availableLicenses]: "Доступные лицензии",
+	[Key.containsDetailedDocumentation]: "Содержит подробную документацию",
 };

@@ -78,6 +78,11 @@ enum I18nKey {
 	languageEn = "languageEn",
 	languageJa = "languageJa",
 	languageRu = "languageRu",
+
+	// License page
+	licenses = "licenses",
+	availableLicenses = "availableLicenses",
+	containsDetailedDocumentation = "containsDetailedDocumentation",
 }
 
 export default I18nKey;

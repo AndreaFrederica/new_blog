@@ -5,8 +5,8 @@ import "@fontsource/roboto/700.css";
 
 import ConfigCarrier from "@components/ConfigCarrier.astro";
 import { profileConfig, siteConfig } from "@/config";
-import { i18n } from "@/i18n/translation";
 import I18nKey from "@/i18n/i18nKey";
+import { i18n } from "@/i18n/translation";
 import {
 	AUTO_MODE,
 	BANNER_HEIGHT,
@@ -21,6 +21,7 @@ import { defaultFavicons } from "../constants/icon";
 import type { Favicon } from "../types/config";
 import { pathsEqual, url } from "../utils/url-utils";
 import "katex/dist/katex.css";
+import "../styles/code-license.css";
 
 interface Props {
 	title?: string;

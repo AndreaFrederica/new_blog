@@ -79,4 +79,8 @@ export const zh_CN: Translation = {
 	[Key.languageEn]: "英语",
 	[Key.languageJa]: "日语",
 	[Key.languageRu]: "俄语",
+
+	[Key.licenses]: "许可证",
+	[Key.availableLicenses]: "可用许可证",
+	[Key.containsDetailedDocumentation]: "包含详细说明文档",
 };

@@ -251,10 +251,24 @@ export async function getSortedPostsWithFallback(lang: string) {
 		? siteConfig.supportedLangs
 		: [defaultLang];
 
-	// 为当前语言构建回退序列：supported 中去掉当前语言
-	const fallbacks = {
-		[lang]: supported.filter((l) => l !== lang),
-	} as Record<string, string[]>;
+	// 为当前语言构建回退序列：当前语言 -> 默认语言 -> 其他所有语言
+	const buildFallbackChain = (targetLang: string) => {
+		const chain = [targetLang];
+
+		// 如果不是默认语言，添加默认语言
+		if (targetLang !== defaultLang) {
+			chain.push(defaultLang);
+		}
+
+		// 添加其他所有支持的语言（排除已经在链中的）
+		for (const lang of supported) {
+			if (!chain.includes(lang)) {
+				chain.push(lang);
+			}
+		}
+
+		return chain;
+	};
 
 	const groupKey = (e: CollectionEntry<"posts">) => {
 		return groupKeyFromSlug(e.slug);
@@ -273,17 +287,9 @@ export async function getSortedPostsWithFallback(lang: string) {
 	const filtered: Array<
 		CollectionEntry<"posts"> & { isFallback?: boolean; originalLang?: string }
 	> = [];
-	const getLocaleChain = (locale: string) => {
-		const chain = [locale];
-		if (fallbacks[locale]) {
-			chain.push(...fallbacks[locale]);
-		}
-		chain.push(defaultLang);
-		return [...new Set(chain)]; // 去重
-	};
 
 	for (const [, groupPosts] of groups) {
-		const chain = getLocaleChain(lang);
+		const chain = buildFallbackChain(lang);
 		let chosen: CollectionEntry<"posts"> | undefined;
 		let chosenLang: string | undefined;
 

@@ -3,6 +3,8 @@ import { type CollectionEntry, getEntry, render } from "astro:content";
 import Markdown from "@components/misc/Markdown.astro";
 import { isSupportedLanguage } from "@utils/i18n-utils";
 import { siteConfig } from "../../config";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
 import MainGridLayout from "../../layouts/MainGridLayout.astro";
 import { getLicenseName, licenses } from "../../licenses";
 
@@ -32,7 +34,7 @@ try {
 
 const Content = licensePost ? (await render(licensePost)).Content : undefined;
 ---
-<MainGridLayout title="License" description="License" lang={lang}>
+<MainGridLayout title={i18n(I18nKey.licenses, lang)} description={i18n(I18nKey.licenses, lang)} lang={lang}>
   <div class="flex w-full overflow-hidden relative min-h-32">
     <div class="card-base z-10 px-9 py-6 relative w-full">
       <Markdown class="mt-2">
@@ -40,7 +42,7 @@ const Content = licensePost ? (await render(licensePost)).Content : undefined;
       </Markdown>
       
       <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">可用许可证</h2>
+        <h2 class="text-2xl font-bold mb-4 text-neutral-900 dark:text-neutral-100">{i18n(I18nKey.availableLicenses, lang)}</h2>
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {licenses.map((license) => (
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -54,7 +56,7 @@ const Content = licensePost ? (await render(licensePost)).Content : undefined;
               </p>
               {license.doc && (
                 <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  包含详细说明文档
+                  {i18n(I18nKey.containsDetailedDocumentation, lang)}
                 </p>
               )}
             </div>

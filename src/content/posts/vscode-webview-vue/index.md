@@ -19,7 +19,7 @@ lang: "zh_cn"
 
 ## 项目结构建议
 
-```
+```txt license:cc_by_nc_4_0
 packages/
   webview/                  # Vue + Vite 前端工程
     dist/spa/               # 产物目录（被扩展引用）
@@ -32,7 +32,9 @@ src/
 
 ## 创建与复用 WebviewPanel
 
-```ts
+```ts license:cc_by_nc_4_0
+// 代码示例 - 基于 CC BY-NC 4.0 许可证
+// Code example - Licensed under CC BY-NC 4.0
 const panel = vscode.window.createWebviewPanel(
   "andreaRoleCardManager",
   "角色卡管理器",
@@ -69,7 +71,10 @@ Webview 是隔离环境，磁盘路径或相对路径都不可直接用，必须
 
 ## 运行时资源映射器（最小思路）
 
-```js
+```js license:cc_by_nc_4_0
+// 代码示例 - 基于 CC BY-NC 4.0 许可证
+// Code example - Licensed under CC BY-NC 4.0
+
 // 1) 注入全局映射：把 /assets/file → asWebviewUri 对应结果
 window.__vscode_resource_map__ = { '/assets/app.js': 'https://.../app.js', ... }
 window.__vscode_resource_baseUri__ = 'https://.../spa'
@@ -92,7 +97,9 @@ function transformPath(p) {
 
 推荐策略（根据需要裁剪）：
 
-```html
+```html license:cc_by_nc_4_0
+<!-- 代码示例 - 基于 CC BY-NC 4.0 许可证 -->
+<!-- Code example - Licensed under CC BY-NC 4.0 -->
 <meta
   http-equiv="Content-Security-Policy"
   content="
@@ -119,7 +126,9 @@ function transformPath(p) {
 
 前端（Webview）：
 
-```ts
+```ts license:cc_by_nc_4_0
+// 代码示例 - 基于 CC BY-NC 4.0 许可证
+// Code example - Licensed under CC BY-NC 4.0
 const vscode = acquireVsCodeApi();
 
 // 请求数据
@@ -140,7 +149,9 @@ function save(list) {
 
 扩展端：
 
-```ts
+```ts license:cc_by_nc_4_0
+// 代码示例 - 基于 CC BY-NC 4.0 许可证
+// Code example - Licensed under CC BY-NC 4.0
 panel.webview.onDidReceiveMessage(async (msg) => {
   if (msg?.type === "requestRoleCards") {
     panel.webview.postMessage({ type: "roleCards", list });
@@ -175,7 +186,7 @@ panel.webview.onDidReceiveMessage(async (msg) => {
 
 ### 扩展端：HTML 预处理与注入（TypeScript, MPL-2.0）
 
-```ts
+```ts license:mpl_2_0
 /*
  * This file is licensed under the Mozilla Public License 2.0 (MPL-2.0).
  * SPDX-License-Identifier: MPL-2.0
@@ -328,7 +339,7 @@ function stripBaseTag(html: string): string {
 
 ### Webview 端：动态资源映射器（JavaScript, MPL-2.0）
 
-```js
+```js license:mpl_2_0
 /*
  * This file is licensed under the Mozilla Public License 2.0 (MPL-2.0).
  * SPDX-License-Identifier: MPL-2.0

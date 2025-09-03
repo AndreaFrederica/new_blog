@@ -2,7 +2,12 @@
     "id": "mit",
     "name": {
         "zh_cn": "MIT 许可证",
-        "en": "MIT License"
+        "en": "MIT License",
+        "ja": "MIT ライセンス",
+        "ru": "Лицензия MIT"
     },
-    "url": "https://opensource.org/licenses/MIT"
+    "url": "/license/mit",
+    "icon": "📄",
+    "badge": "https://img.shields.io/badge/License-MIT-yellow.svg",
+    "official_url": "https://opensource.org/licenses/MIT"
 }
