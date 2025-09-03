@@ -76,4 +76,9 @@ export const en: Translation = {
 		"Sorry, the page you are looking for does not exist or has been moved.",
 	[Key.backToHome]: "Back to Home",
 	[Key.currentPath]: "Path",
+
+	[Key.languageZhCn]: "Chinese",
+	[Key.languageEn]: "English",
+	[Key.languageJa]: "Japanese",
+	[Key.languageRu]: "Russian",
 };

@@ -2,15 +2,38 @@
 import type { CollectionEntry } from "astro:content";
 import path from "node:path";
 import { Icon } from "astro-icon/components";
+import { siteConfig } from "@/config";
 import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
+import { getLanguageName } from "../utils/i18n-utils";
 import { getDir } from "../utils/url-utils";
 import ImageWrapper from "./misc/ImageWrapper.astro";
 import PostMetadata from "./PostMeta.astro";
 
+// 本地化语言名称函数
+function getLocalizedLanguageName(lang: string, currentLang: string): string {
+	const langKeyMap: Record<string, I18nKey> = {
+		zh_cn: I18nKey.languageZhCn,
+		en: I18nKey.languageEn,
+		ja: I18nKey.languageJa,
+		ru: I18nKey.languageRu,
+	};
+
+	const key = langKeyMap[lang];
+	if (key) {
+		return i18n(key, currentLang);
+	}
+
+	// 回退到原始的语言名称
+	return getLanguageName(lang);
+}
+
 interface Props {
 	class?: string;
-	entry: CollectionEntry<"posts">;
+	entry: CollectionEntry<"posts"> & {
+		isFallback?: boolean;
+		originalLang?: string;
+	};
 	title: string;
 	url: string;
 	published: Date;
@@ -21,6 +44,7 @@ interface Props {
 	description: string;
 	draft: boolean;
 	style: string;
+	lang?: string;
 }
 const {
 	entry,
@@ -33,8 +57,17 @@ const {
 	image,
 	description,
 	style,
+	lang,
 } = Astro.props;
 const className = Astro.props.class;
+
+// 检查当前页面语言
+const currentLang =
+	lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+
+// 检查是否为回退版本
+const isFallback = entry.isFallback || false;
+const originalLang = entry.originalLang || entry.data.lang || currentLang;
 
 // Hide the synthetic post-type tag from card display
 const HIDE_TAG = "博文";
@@ -60,8 +93,13 @@ const { remarkPluginFrontmatter } = await entry.render();
             active:text-[var(--title-active)] dark:active:text-[var(--title-active)]
             ">
                 {title}
-                <Icon class="inline text-[2rem] text-[var(--primary)] md:hidden translate-y-0.5 absolute" name="material-symbols:chevron-right-rounded" ></Icon>
-                <Icon class="text-[var(--primary)] text-[2rem] transition hidden md:inline absolute translate-y-0.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0" name="material-symbols:chevron-right-rounded"></Icon>
+                {isFallback && (
+                    <span class="ml-2 px-2 py-1 text-xs font-normal bg-[var(--btn-plain-bg)] text-[var(--btn-plain-text)] rounded-md border border-[var(--line-divider)] inline-block align-middle">
+                        {getLocalizedLanguageName(originalLang, currentLang)}
+                    </span>
+                )}
+                <Icon class="inline text-[2rem] text-[var(--primary)] md:hidden translate-y-0.5 absolute right-0" name="material-symbols:chevron-right-rounded" ></Icon>
+                <Icon class="text-[var(--primary)] text-[2rem] transition hidden md:inline absolute right-0 translate-y-0.5 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0" name="material-symbols:chevron-right-rounded"></Icon>
             </a>
 
             <!-- metadata -->

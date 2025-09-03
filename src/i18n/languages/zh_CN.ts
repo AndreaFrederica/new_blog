@@ -74,4 +74,9 @@ export const zh_CN: Translation = {
 	[Key.notFoundDescription]: "抱歉，您访问的页面不存在或已被移动。",
 	[Key.backToHome]: "返回首页",
 	[Key.currentPath]: "路径",
+
+	[Key.languageZhCn]: "中文",
+	[Key.languageEn]: "英语",
+	[Key.languageJa]: "日语",
+	[Key.languageRu]: "俄语",
 };

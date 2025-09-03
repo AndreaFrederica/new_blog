@@ -6,7 +6,10 @@ import { siteConfig } from "../../config";
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
 import MainGridLayout from "../../layouts/MainGridLayout.astro";
-import { getSortedPostsByLanguage } from "../../utils/content-utils";
+import {
+	getNotesByLanguage,
+	getSortedPostsByLanguage,
+} from "../../utils/content-utils";
 
 export async function getStaticPaths() {
 	const supportedLangs = siteConfig.supportedLangs || ["en"];
@@ -37,14 +40,7 @@ if (!isSupportedLanguage(langParam)) {
 	return Astro.redirect("/404");
 }
 // fetch notes of current language
-let notes = await getCollection("notes", ({ data }) =>
-	import.meta.env.PROD ? data.draft !== true : true,
-);
-notes = notes.filter(
-	(n) =>
-		(n.data.lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn") ===
-		langParam,
-);
+const notes = await getNotesByLanguage(langParam);
 
 const notesList = notes.map((n) => ({
 	slug: n.slug,

@@ -3,16 +3,22 @@ import NoteCard from "@components/NoteCard.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { getNotesWithFallback } from "@utils/content-utils.ts";
 import { siteConfig } from "@/config";
-import I18nKey from "../../i18n/i18nKey";
-import { i18n } from "../../i18n/translation";
+import I18nKey from "../../../i18n/i18nKey";
+import { i18n } from "../../../i18n/translation";
 import { pickLocalized, groupKeyFromSlug } from "@utils/i18n-fallback";
+
+// 为动态 [lang] 路由生成静态路径
+export function getStaticPaths() {
+  const langs = Array.isArray(siteConfig.supportedLangs) && siteConfig.supportedLangs.length
+    ? siteConfig.supportedLangs
+    : [siteConfig.defaultLang || siteConfig.lang || 'zh_cn'];
+  return langs.map((lang) => ({ params: { lang } }));
+}
 
 let notes = await getNotesWithFallback();
 
-// 获取当前语言 - 从URL中提取
-const currentPath = Astro.url.pathname;
-const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
-const currentLang = currentLangMatch ? currentLangMatch[1] : (siteConfig.defaultLang || siteConfig.lang || "zh_cn");
+// 获取当前语言 - 优先从路由参数
+const currentLang = (Astro.params?.lang as string) || (siteConfig.defaultLang || siteConfig.lang || "zh_cn");
 
 const supported = Array.isArray(siteConfig.supportedLangs)
   ? siteConfig.supportedLangs
@@ -21,10 +27,8 @@ const defaultLang = siteConfig.defaultLang || siteConfig.lang || currentLang;
 
 // 简化处理：为notes添加语言回退信息
 const notesWithFallbackInfo = notes.map(note => {
-  // 从note.data.lang或slug中提取语言信息
   const noteLang = note.data.lang || defaultLang;
   const isFallback = noteLang !== currentLang;
-  
   return {
     ...note,
     isFallback,
@@ -32,8 +36,9 @@ const notesWithFallbackInfo = notes.map(note => {
   };
 });
 
-// 使用简化的过滤逻辑，不使用复杂的pickLocalized
+// 使用简化的过滤逻辑
 const localizedNotes = notesWithFallbackInfo;
+
 // 处理过滤参数 + 视图模式与分页
 const params = Astro.url.searchParams;
 const view = params.get("view") || "pages"; // 'pages' | 'continuous'
@@ -45,101 +50,102 @@ const uncategorized = params.get("uncategorized");
 
 let filtered = localizedNotes;
 if (filterTags.length > 0) {
-	filtered = filtered.filter((n) =>
-		(n.data.tags || []).some((t: string) => filterTags.includes(t)),
-	);
+  filtered = filtered.filter((n) =>
+    (n.data.tags || []).some((t: string) => filterTags.includes(t)),
+  );
 }
 if (filterCategories.length > 0) {
-	filtered = filtered.filter(
-		(n) => n.data.category && filterCategories.includes(n.data.category),
-	);
+  filtered = filtered.filter(
+    (n) => n.data.category && filterCategories.includes(n.data.category),
+  );
 }
 if (uncategorized) {
-	filtered = filtered.filter((n) => !n.data.category);
+  filtered = filtered.filter((n) => !n.data.category);
 }
 
 const notesSorted = filtered.sort(
-	(a, b) => {
-		const aDate = a.data.published || new Date(0);
-		const bDate = b.data.published || new Date(0);
-		return bDate.getTime() - aDate.getTime();
-	},
+  (a, b) => {
+    const aDate = a.data.published || new Date(0);
+    const bDate = b.data.published || new Date(0);
+    return bDate.getTime() - aDate.getTime();
+  },
 );
 
 let pageCount = 1;
 let listForRender = notesSorted;
 if (view === "pages") {
-	pageCount = Math.max(1, Math.ceil(notesSorted.length / PAGE_SIZE));
-	if (currentPage > pageCount) currentPage = pageCount;
-	const start = (currentPage - 1) * PAGE_SIZE;
-	const end = start + PAGE_SIZE;
-	listForRender = notesSorted.slice(start, end);
+  pageCount = Math.max(1, Math.ceil(notesSorted.length / PAGE_SIZE));
+  if (currentPage > pageCount) currentPage = pageCount;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  listForRender = notesSorted.slice(start, end);
 }
 
 function buildQuery(next: Record<string, string | number | undefined>) {
-	const q = new URLSearchParams(Astro.url.search);
-	Object.entries(next).forEach(([k, v]) => {
-		if (v === undefined || v === null || v === "") q.delete(k);
-		else q.set(k, String(v));
-	});
-	const qs = q.toString();
-	return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
+  const q = new URLSearchParams(Astro.url.search);
+  Object.entries(next).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === "") q.delete(k);
+    else q.set(k, String(v));
+  });
+  const qs = q.toString();
+  return qs ? `${Astro.url.pathname}?${qs}` : Astro.url.pathname;
 }
 
-const lang = siteConfig.defaultLang || siteConfig.lang;
+// 以当前语言为准
+const lang = currentLang;
 const notesTitle = i18n(I18nKey.notes, lang);
 const notesDescription =
-	lang === "zh_cn"
-		? "随笔记录与短文"
-		: lang === "en"
-			? "Notes and short articles"
-			: lang === "ja"
-				? "ノートと短い記事"
-				: "Заметки и короткие статьи";
+  lang === "zh_cn"
+    ? "随笔记录与短文"
+    : lang === "en"
+      ? "Notes and short articles"
+      : lang === "ja"
+        ? "ノートと短い記事"
+        : "Заметки и короткие статьи";
 
 // 按钮文本翻译
 const paginationText =
-	lang === "zh_cn"
-		? "分页"
-		: lang === "en"
-			? "Pages"
-			: lang === "ja"
-				? "ページ"
-				: "Страницы";
+  lang === "zh_cn"
+    ? "分页"
+    : lang === "en"
+      ? "Pages"
+      : lang === "ja"
+        ? "ページ"
+        : "Страницы";
 const continuousText =
-	lang === "zh_cn"
-		? "连续"
-		: lang === "en"
-			? "Continuous"
-			: lang === "ja"
-				? "連続"
-				: "Непрерывно";
+  lang === "zh_cn"
+    ? "连续"
+    : lang === "en"
+      ? "Continuous"
+      : lang === "ja"
+        ? "連続"
+        : "Непрерывно";
 const pageIndicatorText =
-	lang === "zh_cn"
-		? "第"
-		: lang === "en"
-			? "Page"
-			: lang === "ja"
-				? "第"
-				: "Страница";
+  lang === "zh_cn"
+    ? "第"
+    : lang === "en"
+      ? "Page"
+      : lang === "ja"
+        ? "第"
+        : "Страница";
 const pageOfText =
-	lang === "zh_cn" ? "页" : lang === "en" ? "" : lang === "ja" ? "ページ" : "";
+  lang === "zh_cn" ? "页" : lang === "en" ? "" : lang === "ja" ? "ページ" : "";
 const prevText =
-	lang === "zh_cn"
-		? "上一页"
-		: lang === "en"
-			? "Previous"
-			: lang === "ja"
-				? "前のページ"
-				: "Предыдущая";
+  lang === "zh_cn"
+    ? "上一页"
+    : lang === "en"
+      ? "Previous"
+      : lang === "ja"
+        ? "前のページ"
+        : "Предыдущая";
 const nextText =
-	lang === "zh_cn"
-		? "下一页"
-		: lang === "en"
-			? "Next"
-			: lang === "ja"
-				? "次のページ"
-				: "Следующая";
+  lang === "zh_cn"
+    ? "下一页"
+    : lang === "en"
+      ? "Next"
+      : lang === "ja"
+        ? "次のページ"
+        : "Следующая";
 ---
 <MainGridLayout title={notesTitle} description={notesDescription} setOGTypeArticle={false} scope="notes" lang={lang}>
   <div class="flex items-center justify-between px-1 md:px-0 mb-3">
@@ -157,11 +163,11 @@ const nextText =
           title={entry.data.title}
           published={entry.data.published || new Date()}
           updated={entry.data.updated}
-          url={`/notes/${entry.slug}`}
+          url={`/${lang}/notes/${entry.slug}`}
           description={entry.data.description}
           tags={entry.data.tags}
           category={entry.data.category}
-          currentLang={currentLang}
+          currentLang={lang}
           class:list="onload-animation"
         />
       </div>

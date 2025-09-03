@@ -5,7 +5,7 @@ import Markdown from "@components/misc/Markdown.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getSortedPosts } from "@utils/content-utils";
+import { getSortedPosts, getSortedPostsWithFallback } from "@utils/content-utils";
 import { getPostUrl, isSupportedLanguage } from "@utils/i18n-utils";
 import { getDir, getPostUrlBySlug } from "@utils/url-utils";
 import { Icon } from "astro-icon/components";
@@ -16,40 +16,24 @@ import { profileConfig, siteConfig } from "../../../config";
 import { formatDateToYYYYMMDD } from "../../../utils/date-utils";
 
 export async function getStaticPaths() {
-	const blogEntries = await getSortedPosts();
-	const paths = [];
-
-	// 为每个支持的语言（除默认语言外）生成路径
+	const paths = [] as any[];
 	const supportedLangs = siteConfig.supportedLangs || ["en"];
 	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
 
 	for (const lang of supportedLangs) {
 		if (lang === defaultLang) continue; // 默认语言使用根路径
-
-		// 过滤出该语言的文章
-		const langPosts = blogEntries.filter((entry) => {
-			const postLang = entry.data.lang || defaultLang;
-			return postLang === lang;
-		});
-
+		// 对该语言使用回退列表，确保每个目录都有一条可访问的路径
+		const langPosts = await getSortedPostsWithFallback(lang);
 		for (const entry of langPosts) {
-			// 清理slug，移除语言后缀
-			let cleanSlug = entry.slug;
-			// 移除语言后缀，如 guide/indexru -> guide/index, guide/indexen -> guide/index
-			cleanSlug = cleanSlug.replace(
-				new RegExp(`(index|[^/]+)(${lang})$`),
-				"$1",
-			);
-			// 如果以index结尾，移除index部分
-			cleanSlug = cleanSlug.replace(/\/index$/, "");
+			const id = (entry as any).id as string;
+			const parts = id.split("/");
+			const file = parts.pop() || ""; // e.g., index.en.md or guide.en.md
+			const baseNoExt = file.replace(/\.(md|mdx)$/i, "");
+			const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
+			const dir = parts.join("/");
+			const pathSlug = base === "index" ? dir : (dir ? `${dir}/${base}` : base);
 
-			paths.push({
-				params: {
-					lang: lang,
-					slug: cleanSlug,
-				},
-				props: { entry },
-			});
+			paths.push({ params: { lang, slug: pathSlug }, props: { entry } });
 		}
 	}
 

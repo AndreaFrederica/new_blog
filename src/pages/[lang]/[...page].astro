@@ -4,7 +4,7 @@ import Pagination from "../../components/control/Pagination.astro";
 import PostPage from "../../components/PostPage.astro";
 import { PAGE_SIZE } from "../../constants/constants";
 import MainGridLayout from "../../layouts/MainGridLayout.astro";
-import { getSortedPostsByLanguage } from "../../utils/content-utils";
+import { getSortedPostsWithFallback } from "../../utils/content-utils";
 import { siteConfig } from "../../config";
 import { isSupportedLanguage } from "@utils/i18n-utils";
 
@@ -18,7 +18,7 @@ export const getStaticPaths = (async ({ paginate }) => {
 		if (lang === defaultLang) continue; // 默认语言使用根路径
 		
 		// 获取该语言的文章
-		const langPosts = await getSortedPostsByLanguage(lang);
+        const langPosts = await getSortedPostsWithFallback(lang);
 		
 		// 生成分页路径
 		const paginatedPaths = paginate(langPosts, { 

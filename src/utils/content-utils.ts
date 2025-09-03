@@ -1,6 +1,7 @@
 import { type CollectionEntry, getCollection } from "astro:content";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
+import { groupKeyFromSlug, pickLocalized } from "@utils/i18n-fallback";
 import { getCategoryUrl } from "@utils/url-utils.ts";
 import { siteConfig } from "@/config";
 import type {
@@ -187,17 +188,37 @@ export async function getCategoryList(lang?: string): Promise<Category[]> {
 
 // 多语言支持函数
 
-// 根据语言获取文章
+// 根据语言获取文章（带回退机制）
 export async function getPostsByLanguage(lang: string) {
 	const allPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
 	ensureTypeTag(allPosts as CollectionEntry<"posts">[], POST_TYPE_TAG);
-	return allPosts.filter((post) => {
-		const postLang =
-			post.data.lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-		return postLang === lang;
-	});
+
+	// 使用 pickLocalized 函数来实现语言回退
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	const fallbackChainOptions = {
+		defaultLocale: defaultLang,
+		fallbacks: {
+			en: ["zh_cn"],
+			zh_cn: ["en"],
+			ja: ["zh_cn", "en"],
+			ru: ["zh_cn", "en"],
+		},
+	};
+
+	// 创建一个适配函数，从条目对象中提取 slug 并生成组键
+	const groupKeyFunc = (e: CollectionEntry<"posts">) =>
+		groupKeyFromSlug(e.slug);
+
+	const filterFunc = pickLocalized(
+		allPosts,
+		lang,
+		groupKeyFunc,
+		fallbackChainOptions,
+	);
+
+	return allPosts.filter(filterFunc);
 }
 
 // 获取文章的翻译版本
@@ -212,6 +233,93 @@ export async function getPostTranslations(translationKey: string) {
 export async function getSortedPostsByLanguage(lang: string) {
 	const posts = await getPostsByLanguage(lang);
 	return posts.sort((a, b) => {
+		const dateA = new Date(a.data.published);
+		const dateB = new Date(b.data.published);
+		return dateA > dateB ? -1 : 1;
+	});
+}
+
+// 获取按语言回退后的排序文章列表（每个目录/同一篇只保留一个最佳版本）
+export async function getSortedPostsWithFallback(lang: string) {
+	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
+		return import.meta.env.PROD ? data.draft !== true : true;
+	});
+	ensureTypeTag(allBlogPosts as CollectionEntry<"posts">[], POST_TYPE_TAG);
+
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	const supported = Array.isArray(siteConfig.supportedLangs)
+		? siteConfig.supportedLangs
+		: [defaultLang];
+
+	// 为当前语言构建回退序列：supported 中去掉当前语言
+	const fallbacks = {
+		[lang]: supported.filter((l) => l !== lang),
+	} as Record<string, string[]>;
+
+	const groupKey = (e: CollectionEntry<"posts">) => {
+		const id = e.id as string | undefined;
+		if (id) return id.split("/").slice(0, -1).join("/");
+		return groupKeyFromSlug(e.slug);
+	};
+
+	// 按组分组文章
+	const groups = new Map<string, CollectionEntry<"posts">[]>();
+	for (const post of allBlogPosts) {
+		const key = groupKey(post);
+		if (!groups.has(key)) groups.set(key, []);
+		const group = groups.get(key);
+		if (group) group.push(post);
+	}
+
+	// 为每个组选择最佳语言版本，并标记是否为回退版本
+	const filtered: Array<
+		CollectionEntry<"posts"> & { isFallback?: boolean; originalLang?: string }
+	> = [];
+	const getLocaleChain = (locale: string) => {
+		const chain = [locale];
+		if (fallbacks[locale]) {
+			chain.push(...fallbacks[locale]);
+		}
+		chain.push(defaultLang);
+		return [...new Set(chain)]; // 去重
+	};
+
+	for (const [, groupPosts] of groups) {
+		const chain = getLocaleChain(lang);
+		let chosen: CollectionEntry<"posts"> | undefined;
+		let chosenLang: string | undefined;
+
+		for (const targetLang of chain) {
+			const candidates = groupPosts.filter((p) => {
+				const postLang = p.data.lang || defaultLang;
+				return postLang === targetLang;
+			});
+
+			if (candidates.length > 0) {
+				chosen = candidates[0];
+				chosenLang = targetLang;
+				break;
+			}
+		}
+
+		if (!chosen) {
+			chosen = groupPosts[0];
+			chosenLang = chosen.data.lang || defaultLang;
+		}
+
+		// 标记是否为回退版本
+		const isFallback = chosenLang !== lang;
+		const extendedPost = chosen as CollectionEntry<"posts"> & {
+			isFallback?: boolean;
+			originalLang?: string;
+		};
+		extendedPost.isFallback = isFallback;
+		extendedPost.originalLang = chosenLang;
+
+		filtered.push(extendedPost);
+	}
+
+	return filtered.sort((a, b) => {
 		const dateA = new Date(a.data.published);
 		const dateB = new Date(b.data.published);
 		return dateA > dateB ? -1 : 1;
@@ -237,7 +345,7 @@ export function getSupportedLanguages(): string[] {
 // ---------------- Notes & Combined helpers ----------------
 // NoteEntry is imported from shared types
 
-export async function getNotesByLanguage(lang?: string) {
+export async function getNotesByLanguage(_lang?: string) {
 	const allNotes = await getCollection("notes", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
@@ -247,9 +355,10 @@ export async function getNotesByLanguage(lang?: string) {
 		if (!tags.includes("随笔")) tags.push("随笔");
 		(n.data as NoteEntry["data"]).tags = tags;
 	}
-	if (!lang) return allNotes;
-	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-	return allNotes.filter((n) => (n.data.lang || defaultLang) === lang);
+
+	// 对于 notes，始终返回所有的 notes，不进行语言过滤
+	// 这样所有语言的归档页面都能显示所有的随笔
+	return allNotes;
 }
 
 // uses existing Tag type above

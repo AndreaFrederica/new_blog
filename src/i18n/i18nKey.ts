@@ -72,6 +72,12 @@ enum I18nKey {
 	notFoundDescription = "notFoundDescription",
 	backToHome = "backToHome",
 	currentPath = "currentPath",
+
+	// Language names for fallback tags
+	languageZhCn = "languageZhCn",
+	languageEn = "languageEn",
+	languageJa = "languageJa",
+	languageRu = "languageRu",
 }
 
 export default I18nKey;

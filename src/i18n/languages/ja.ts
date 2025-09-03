@@ -78,4 +78,9 @@ export const ja: Translation = {
 		"申し訳ございませんが、お探しのページは存在しないか移動されました。",
 	[Key.backToHome]: "ホームに戻る",
 	[Key.currentPath]: "パス",
+
+	[Key.languageZhCn]: "中国語",
+	[Key.languageEn]: "英語",
+	[Key.languageJa]: "日本語",
+	[Key.languageRu]: "ロシア語",
 };

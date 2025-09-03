@@ -320,6 +320,9 @@ const shouldShowLangSwitcher =
 				// 保存语言偏好到cookie
 				setCookie('preferred-language', selectedLang);
 				
+				// 设置手动切换标记，防止自动语言检测干扰
+				sessionStorage.setItem('manual-lang-switch', 'true');
+				
 				// 触发语言变化事件
 				window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: selectedLang } }));
 				

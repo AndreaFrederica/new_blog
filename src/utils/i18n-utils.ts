@@ -173,44 +173,15 @@ export function getCanonicalUrl(slug: string, lang?: string): string {
 }
 
 /**
- * 获取语言切换的URL（带回退机制）
+ * 获取语言切换的URL（只返回语言标识，客户端处理完整URL）
  */
 export function getLanguageSwitchUrl(
-	currentUrl: string,
+	_currentUrl: string,
 	targetLang: string,
 ): string {
-	const currentLang = extractLangFromUrl(currentUrl);
-
-	// 移除当前语言前缀
-	let cleanUrl = currentUrl;
-	if (!isDefaultLanguage(currentLang)) {
-		cleanUrl = currentUrl.replace(new RegExp(`^\/${currentLang}(?:\/|$)`), "/");
-		// 如果结果是单独的斜杠且原URL不是根路径，需要保持原有路径结构
-		if (
-			cleanUrl === "/" &&
-			currentUrl !== `/${currentLang}` &&
-			currentUrl !== `/${currentLang}/`
-		) {
-			cleanUrl = currentUrl.replace(new RegExp(`^\/${currentLang}`), "");
-		}
-	}
-
-	// 检查是否是文章页面
-	const isPostPage = cleanUrl.match(/^\/posts\/(.+)$/);
-	if (isPostPage) {
-		// 对于文章页面，实现回退机制
-		return getPostLanguageSwitchUrl(cleanUrl, targetLang);
-	}
-
-	// 添加目标语言前缀
-	if (isDefaultLanguage(targetLang)) {
-		return cleanUrl || "/";
-	}
-	// 如果cleanUrl是根路径，直接返回语言前缀，避免添加尾随斜杠
-	if (cleanUrl === "/") {
-		return `/${targetLang}`;
-	}
-	return `/${targetLang}${cleanUrl}`;
+	// 服务端不再计算复杂的URL，只返回语言标识
+	// 客户端会自己处理URL转换
+	return `#lang-${targetLang}`;
 }
 
 /**
@@ -229,12 +200,9 @@ export function getPostLanguageSwitchUrl(
 
 	const slug = slugMatch[1];
 
-	// 尝试构建目标语言的文章URL
-	const targetUrl = getPostUrl(slug, targetLang);
-
-	// 这里我们返回目标URL，实际的存在性检查将在客户端进行
-	// 如果文章不存在，客户端会回退到归档页面
-	return targetUrl;
+	// 直接构建目标语言的文章URL
+	// 由于有回退逻辑，文章肯定存在，不需要检查存在性
+	return getPostUrl(slug, targetLang);
 }
 
 /**

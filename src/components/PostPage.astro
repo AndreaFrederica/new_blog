@@ -1,16 +1,20 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { getPostUrl } from "@utils/i18n-utils";
+import type { Page } from "astro";
 import { siteConfig } from "@/config";
 import PostCard from "./PostCard.astro";
 
 interface Props {
-	page: any;
+	page: Page<
+		CollectionEntry<"posts"> & { isFallback?: boolean; originalLang?: string }
+	>;
 	lang?: string;
 }
 
 const { page, lang } = Astro.props;
-const currentLang = lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+const currentLang =
+	lang || siteConfig.defaultLang || siteConfig.lang || "zh_cn";
 
 let delay = 0;
 const interval = 50;
@@ -28,6 +32,7 @@ const interval = 50;
                 image={entry.data.image}
                 description={entry.data.description}
                 draft={entry.data.draft}
+                lang={currentLang}
                 class:list="onload-animation"
                 style={`animation-delay: calc(var(--content-delay) + ${delay++ * interval}ms);`}
         ></PostCard>

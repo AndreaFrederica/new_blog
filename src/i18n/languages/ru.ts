@@ -77,4 +77,9 @@ export const ru: Translation = {
 		"Извините, страница, которую вы ищете, не существует или была перемещена.",
 	[Key.backToHome]: "Вернуться на главную",
 	[Key.currentPath]: "Путь",
+
+	[Key.languageZhCn]: "Китайский",
+	[Key.languageEn]: "Английский",
+	[Key.languageJa]: "Японский",
+	[Key.languageRu]: "Русский",
 };

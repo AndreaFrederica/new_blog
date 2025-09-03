@@ -5,7 +5,7 @@ import Markdown from "@components/misc/Markdown.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getSortedPosts } from "@utils/content-utils";
+import { getSortedPosts, getSortedPostsWithFallback } from "@utils/content-utils";
 import { getPostUrl } from "@utils/i18n-utils";
 import { getDir, getPostUrlBySlug } from "@utils/url-utils";
 import { Icon } from "astro-icon/components";
@@ -16,38 +16,19 @@ import { profileConfig, siteConfig } from "../../config";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
 
 export async function getStaticPaths() {
-	const blogEntries = await getSortedPosts();
-	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+    const entries = await getSortedPostsWithFallback(defaultLang);
 
-	return blogEntries
-		.filter((entry) => {
-			// 只为默认语言的文章生成路径
-			const postLang = entry.data.lang || defaultLang;
-			return postLang === defaultLang;
-		})
-		.map((entry) => {
-			// 清理 slug，移除语言后缀（如 indexru, guideen 等）
-			let cleanSlug = entry.slug;
-
-			// 移除形如 indexru, guideen 等语言后缀
-			cleanSlug = cleanSlug.replace(/index[a-z]{2}$/i, "");
-
-			// 移除末尾的 /index
-			cleanSlug = cleanSlug.replace(/\/index$/, "");
-
-			// 如果整个 slug 就是 index，则设为空字符串
-			if (cleanSlug === "index") {
-				cleanSlug = "";
-			}
-
-			// 移除开头和结尾的斜杠
-			cleanSlug = cleanSlug.replace(/^\/+|\/+$/g, "");
-
-			return {
-				params: { slug: cleanSlug },
-				props: { entry },
-			};
-		});
+    return entries.map((entry) => {
+        const id = (entry as any).id as string;
+        const parts = id.split("/");
+        const file = parts.pop() || ""; // e.g., index.en.md or guide.en.md
+        const baseNoExt = file.replace(/\.(md|mdx)$/i, "");
+        const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
+        const dir = parts.join("/");
+        const pathSlug = base === "index" ? dir : (dir ? `${dir}/${base}` : base);
+        return { params: { slug: pathSlug }, props: { entry } };
+    });
 }
 
 const { entry } = Astro.props;
