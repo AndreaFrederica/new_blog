@@ -43,43 +43,41 @@ const postUrl = decodeURIComponent(Astro.url.toString());
 const licenseObj = getLicenseConfig(currentLang);
 let licenseConf;
 if (propLicenseId) {
-    const licObj = getLicenseById(propLicenseId);
-    if (licObj) {
-        licenseConf = {
-            name:
-                licObj.name[currentLang] ||
-                licObj.name["zh_cn"] ||
-                licObj.name["en"] ||
-                licObj.id,
-            url: licObj.url,
-        };
-    } else {
-        // fallback to default license if id not found
-        const defaultLic = getLicenseById(
-            licenseObj.id || "all_rights_reserved",
-        );
-        licenseConf = {
-            name: defaultLic
-                ? defaultLic.name[currentLang] ||
-                    defaultLic.name["zh_cn"] ||
-                    defaultLic.name["en"] ||
-                    defaultLic.id
-                : "",
-            url: defaultLic ? defaultLic.url : "",
-        };
-    }
+	const licObj = getLicenseById(propLicenseId);
+	if (licObj) {
+		licenseConf = {
+			name:
+				licObj.name[currentLang] ||
+				licObj.name["zh_cn"] ||
+				licObj.name["en"] ||
+				licObj.id,
+			url: licObj.url,
+		};
+	} else {
+		// fallback to default license if id not found
+		const defaultLic = getLicenseById(licenseObj.id || "all_rights_reserved");
+		licenseConf = {
+			name: defaultLic
+				? defaultLic.name[currentLang] ||
+					defaultLic.name["zh_cn"] ||
+					defaultLic.name["en"] ||
+					defaultLic.id
+				: "",
+			url: defaultLic ? defaultLic.url : "",
+		};
+	}
 } else {
-    // 没有声明 license 时，渲染默认许可证
-    const defaultLic = getLicenseById(licenseObj.id || "all_rights_reserved");
-    licenseConf = {
-        name: defaultLic
-            ? defaultLic.name[currentLang] ||
-                defaultLic.name["zh_cn"] ||
-                defaultLic.name["en"] ||
-                defaultLic.id
-            : "",
-        url: defaultLic ? defaultLic.url : "",
-    };
+	// 没有声明 license 时，渲染默认许可证
+	const defaultLic = getLicenseById(licenseObj.id || "all_rights_reserved");
+	licenseConf = {
+		name: defaultLic
+			? defaultLic.name[currentLang] ||
+				defaultLic.name["zh_cn"] ||
+				defaultLic.name["en"] ||
+				defaultLic.id
+			: "",
+		url: defaultLic ? defaultLic.url : "",
+	};
 }
 
 function localizeUrl(url?: string, currentLang?: string) {
@@ -94,7 +92,7 @@ function localizeUrl(url?: string, currentLang?: string) {
 // Ensure we always have a sensible URL (prefer resolved, then site default, then preset fallback)
 const defaultId = licenseObj.id || "all_rights_reserved";
 const fallbackUrl =
-    (licenseObj.url || "").trim() || (getLicenseUrl(defaultId) || "").trim();
+	(licenseObj.url || "").trim() || (getLicenseUrl(defaultId) || "").trim();
 licenseConf.url = localizeUrl(licenseConf.url || fallbackUrl, currentLang);
 ---
 <div class={`relative transition overflow-hidden bg-[var(--license-block-bg)] py-5 px-6 ${className}`}>

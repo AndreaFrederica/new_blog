@@ -1,11 +1,11 @@
 ---
 import { Icon } from "astro-icon/components";
+import { getLicenseConfig, siteConfig } from "../config";
 import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
+import { getLicenseById, getLicenseUrl } from "../licenses";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 import { getCategoryUrl, getTagUrl } from "../utils/url-utils";
-import { getLicenseConfig, siteConfig } from "../config";
-import { getLicenseById, getLicenseUrl } from "../licenses";
 
 interface Props {
 	class: string;
@@ -15,10 +15,10 @@ interface Props {
 	category: string | null;
 	hideTagsForMobile?: boolean;
 	hideUpdateDate?: boolean;
-    categoryUrlBase?: string; // optional: 'notes' to link to /notes?category=
-    licenseName?: string;
-    licenseUrl?: string;
-    lang?: string;
+	categoryUrlBase?: string; // optional: 'notes' to link to /notes?category=
+	licenseName?: string;
+	licenseUrl?: string;
+	lang?: string;
 }
 const {
 	published,
@@ -27,10 +27,10 @@ const {
 	category,
 	hideTagsForMobile = false,
 	hideUpdateDate = false,
-    categoryUrlBase = "",
-    licenseName,
-    licenseUrl,
-    lang,
+	categoryUrlBase = "",
+	licenseName,
+	licenseUrl,
+	lang,
 } = Astro.props;
 const className = Astro.props.class;
 
@@ -38,21 +38,25 @@ const className = Astro.props.class;
 let resolvedLicenseName = licenseName;
 let resolvedLicenseUrl = licenseUrl;
 if (licenseName) {
-    const licObj = getLicenseById(licenseName);
-    if (licObj) {
-        const langCode = lang || siteConfig.lang || "zh_cn";
-        resolvedLicenseName = licObj.name[langCode] || licObj.name["zh_cn"] || licObj.name["en"] || licObj.id;
-        if (!resolvedLicenseUrl) resolvedLicenseUrl = licObj.url;
-    }
+	const licObj = getLicenseById(licenseName);
+	if (licObj) {
+		const langCode = lang || siteConfig.lang || "zh_cn";
+		resolvedLicenseName =
+			licObj.name[langCode] ||
+			licObj.name["zh_cn"] ||
+			licObj.name["en"] ||
+			licObj.id;
+		if (!resolvedLicenseUrl) resolvedLicenseUrl = licObj.url;
+	}
 }
 
 function localizeUrl(url?: string, currentLang?: string) {
-    if (!url) return url;
-    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-    if (!currentLang || currentLang === defaultLang) return url;
-    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
-    if (url === "/license") return `/${currentLang}/license`;
-    return url;
+	if (!url) return url;
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	if (!currentLang || currentLang === defaultLang) return url;
+	if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+	if (url === "/license") return `/${currentLang}/license`;
+	return url;
 }
 
 const licenseObj = getLicenseConfig(lang || siteConfig.lang || "zh_cn");
@@ -60,7 +64,9 @@ const defaultId = licenseObj.id || "all_rights_reserved";
 const rawUrl = resolvedLicenseUrl || licenseObj.url || getLicenseUrl(defaultId);
 const displayUrl = localizeUrl(rawUrl, lang);
 const displayName = resolvedLicenseName || licenseObj.name;
-const fallbackUrl = (licenseObj.url || "").trim() || (getLicenseUrl("all_rights_reserved") || "").trim();
+const fallbackUrl =
+	(licenseObj.url || "").trim() ||
+	(getLicenseUrl("all_rights_reserved") || "").trim();
 const computedUrl = (displayUrl || "").trim() || fallbackUrl;
 const hasUrl = computedUrl.length > 0;
 ---

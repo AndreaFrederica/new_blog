@@ -2,9 +2,9 @@
 import type { CollectionEntry } from "astro:content";
 import { Icon } from "astro-icon/components";
 import { getLicenseConfig, siteConfig } from "../config";
-import { getLicenseById } from "../licenses";
 import I18nKey from "../i18n/i18nKey";
 import { i18n } from "../i18n/translation";
+import { getLicenseById } from "../licenses";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 import Markdown from "./misc/Markdown.astro";
 
@@ -43,25 +43,29 @@ let licenseUrl = (entry.data as any)?.licenseUrl ?? (licenseObj.url || "");
 
 // Resolve predefined license ids to display name/url
 if (licenseName) {
-    const licObj = getLicenseById(licenseName);
-    if (licObj) {
-        licenseName = licObj.name[langCode] || licObj.name["zh_cn"] || licObj.name["en"] || licObj.id;
-        if (!(entry.data as any)?.licenseUrl) licenseUrl = licObj.url;
-    }
+	const licObj = getLicenseById(licenseName);
+	if (licObj) {
+		licenseName =
+			licObj.name[langCode] ||
+			licObj.name["zh_cn"] ||
+			licObj.name["en"] ||
+			licObj.id;
+		if (!(entry.data as any)?.licenseUrl) licenseUrl = licObj.url;
+	}
 }
 // default to site default preset url when still empty
 if (!licenseUrl || licenseUrl.trim().length === 0) {
-    const defaultId = licenseObj.id || "all_rights_reserved";
-    licenseUrl = getLicenseById(defaultId)?.url || licenseUrl;
+	const defaultId = licenseObj.id || "all_rights_reserved";
+	licenseUrl = getLicenseById(defaultId)?.url || licenseUrl;
 }
 
 function localizeUrl(url?: string, currentLang?: string) {
-    if (!url) return url;
-    const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
-    if (!currentLang || currentLang === defaultLang) return url;
-    if (url.startsWith("/license/")) return `/${currentLang}${url}`;
-    if (url === "/license") return `/${currentLang}/license`;
-    return url;
+	if (!url) return url;
+	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
+	if (!currentLang || currentLang === defaultLang) return url;
+	if (url.startsWith("/license/")) return `/${currentLang}${url}`;
+	if (url === "/license") return `/${currentLang}/license`;
+	return url;
 }
 
 licenseUrl = (localizeUrl(licenseUrl, langCode) || "").trim();
@@ -69,7 +73,9 @@ const hasLicenseUrl = licenseUrl.length > 0;
 
 // Prepare tags for display (hide synthetic type tag if present)
 const HIDE_TAG = "随笔";
-const displayTags: string[] = Array.isArray(tags) ? tags.filter((t) => t !== HIDE_TAG) : [];
+const displayTags: string[] = Array.isArray(tags)
+	? tags.filter((t) => t !== HIDE_TAG)
+	: [];
 ---
 <div class:list={["card-base flex w-full overflow-hidden relative note-card", className]} style={style}>
     <div class="pl-6 md:pl-9 pr-6 md:pr-6 pt-6 md:pt-7 pb-6 relative w-full">
