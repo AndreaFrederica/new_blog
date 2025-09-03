@@ -2,34 +2,38 @@
 import NoteCard from "@components/NoteCard.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { getNotesWithFallback } from "@utils/content-utils.ts";
+import { groupKeyFromSlug, pickLocalized } from "@utils/i18n-fallback";
 import { siteConfig } from "@/config";
 import I18nKey from "../../i18n/i18nKey";
 import { i18n } from "../../i18n/translation";
-import { pickLocalized, groupKeyFromSlug } from "@utils/i18n-fallback";
 
 let notes = await getNotesWithFallback();
 
 // 获取当前语言 - 从URL中提取
 const currentPath = Astro.url.pathname;
-const currentLangMatch = currentPath.match(/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i);
-const currentLang = currentLangMatch ? currentLangMatch[1] : (siteConfig.defaultLang || siteConfig.lang || "zh_cn");
+const currentLangMatch = currentPath.match(
+	/^\/([a-z]{2}(?:_[a-z]{2})?)(?:\/|$)/i,
+);
+const currentLang = currentLangMatch
+	? currentLangMatch[1]
+	: siteConfig.defaultLang || siteConfig.lang || "zh_cn";
 
 const supported = Array.isArray(siteConfig.supportedLangs)
-  ? siteConfig.supportedLangs
-  : [currentLang];
+	? siteConfig.supportedLangs
+	: [currentLang];
 const defaultLang = siteConfig.defaultLang || siteConfig.lang || currentLang;
 
 // 简化处理：为notes添加语言回退信息
-const notesWithFallbackInfo = notes.map(note => {
-  // 从note.data.lang或slug中提取语言信息
-  const noteLang = note.data.lang || defaultLang;
-  const isFallback = noteLang !== currentLang;
-  
-  return {
-    ...note,
-    isFallback,
-    originalLang: noteLang,
-  };
+const notesWithFallbackInfo = notes.map((note) => {
+	// 从note.data.lang或slug中提取语言信息
+	const noteLang = note.data.lang || defaultLang;
+	const isFallback = noteLang !== currentLang;
+
+	return {
+		...note,
+		isFallback,
+		originalLang: noteLang,
+	};
 });
 
 // 使用简化的过滤逻辑，不使用复杂的pickLocalized
@@ -58,13 +62,11 @@ if (uncategorized) {
 	filtered = filtered.filter((n) => !n.data.category);
 }
 
-const notesSorted = filtered.sort(
-	(a, b) => {
-		const aDate = a.data.published || new Date(0);
-		const bDate = b.data.published || new Date(0);
-		return bDate.getTime() - aDate.getTime();
-	},
-);
+const notesSorted = filtered.sort((a, b) => {
+	const aDate = a.data.published || new Date(0);
+	const bDate = b.data.published || new Date(0);
+	return bDate.getTime() - aDate.getTime();
+});
 
 let pageCount = 1;
 let listForRender = notesSorted;
