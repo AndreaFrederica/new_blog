@@ -1,5 +1,4 @@
 ---
-import fs from "node:fs/promises";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
 import { licenses, getLicenseById } from "../../licenses";
@@ -17,6 +16,17 @@ if (!lic) {
   return Astro.redirect("/404");
 }
 
+// Preload all license markdown files as raw text so it works on Workers
+const mdModules = import.meta.glob("../../licenses/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+
+// Helper to fetch raw content by filename from the eager glob map
+function readMarkdownFromBundle(filename: string): string | null {
+  const keys = Object.keys(mdModules);
+  // Keys are Vite module IDs like '../../licenses/xxx.md'
+  const matchKey = keys.find((k) => k.endsWith(`/licenses/${filename}`));
+  return matchKey ? mdModules[matchKey] : null;
+}
+
 // i18n-aware doc resolution: try default lang variant, generic, then any available language
 async function resolveMarkdownHtml(licenseId: string) {
   const supported = siteConfig.supportedLangs || ["en"]; // order matters
@@ -32,15 +42,6 @@ async function resolveMarkdownHtml(licenseId: string) {
   for (const l of supported) {
     if (l !== defaultLang) candidates.push(`${licenseId}_${l}.md`);
   }
-  // finally, scan directory for any matching files if previous attempts fail
-  const licensesDir = new URL(`../../licenses/`, import.meta.url);
-  try {
-    const files = await fs.readdir(licensesDir);
-    for (const f of files) {
-      if (f.startsWith(`${licenseId}_`) && f.endsWith(`.md`)) candidates.push(f);
-    }
-  } catch {}
-
   // de-dup
   const seen = new Set<string>();
   const uniq = candidates.filter((f) => {
@@ -50,12 +51,11 @@ async function resolveMarkdownHtml(licenseId: string) {
   });
 
   for (const file of uniq) {
-    try {
-      const mdUrl = new URL(`../../licenses/${file}`, import.meta.url);
-      const content = await fs.readFile(mdUrl, "utf-8");
+    const content = readMarkdownFromBundle(file);
+    if (content) {
       const md = markdownIt({ html: true, linkify: true, breaks: false });
       return md.render(content);
-    } catch {}
+    }
   }
   return `<p>License document not found.</p>`;
 }
