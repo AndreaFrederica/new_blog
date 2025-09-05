@@ -7,7 +7,6 @@ category: 小说助手
 draft: false
 license: cc_by_nc_4_0
 lang: "zh_cn"
-slug: "novel-helper-0324"
 image: "./image/anh_logo-devlog.png"
 ---
 

@@ -12,6 +12,28 @@ import type {
 
 const POST_TYPE_TAG = "博文";
 
+// 统一的slug计算函数，与路由逻辑保持一致
+function getRealSlug(entry: CollectionEntry<"posts">): string {
+	const id = entry.id as string;
+	const parts = id.split("/");
+	const file = parts.pop() || "";
+	const baseNoExt = file.replace(/\.(md|mdx)$/i, "");
+	const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
+	const dir = parts.join("/");
+	const realSlug = base === "index" ? dir : dir ? `${dir}/${base}` : base;
+	
+	// 检查frontmatter中的slug是否与真实路径一致
+	if (entry.data.slug && entry.data.slug !== realSlug) {
+		console.warn(`⚠️  [SLUG MISMATCH] File: ${id}`);
+		console.warn(`   Expected slug: "${realSlug}" (based on directory path)`);
+		console.warn(`   Found slug: "${entry.data.slug}" (in frontmatter)`);
+		console.warn(`   Using real path: "${realSlug}"`);
+		console.warn("");
+	}
+	
+	return realSlug;
+}
+
 function ensureTypeTag<T extends { data: { tags: string[] } }>(
 	entries: T[],
 	typeTag: string,
@@ -82,7 +104,7 @@ export async function getSortedPostsList(): Promise<PostForList[]> {
 
 	// delete post.body
 	const sortedPostsList = sortedFullPosts.map((post) => ({
-		slug: post.slug,
+		slug: getRealSlug(post),
 		data: post.data,
 	}));
 
@@ -102,7 +124,7 @@ export async function getSortedPostsListByLanguage(
 
 	// delete post.body
 	const sortedPostsList = sortedPosts.map((post) => ({
-		slug: post.slug,
+		slug: getRealSlug(post),
 		data: post.data,
 	}));
 

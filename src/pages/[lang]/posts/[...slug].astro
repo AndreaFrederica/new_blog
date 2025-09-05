@@ -25,15 +25,26 @@ export async function getStaticPaths() {
 		// 对该语言使用回退列表，确保每个目录都有一条可访问的路径
 		const langPosts = await getSortedPostsWithFallback(lang);
 		for (const entry of langPosts) {
-			const id = (entry as any).id as string;
+			// 计算基于文件路径的真实slug
+			const id = entry.id as string;
 			const parts = id.split("/");
 			const file = parts.pop() || ""; // e.g., index.en.md or guide.en.md
 			const baseNoExt = file.replace(/\.(md|mdx)$/i, "");
 			const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
 			const dir = parts.join("/");
-			const pathSlug = base === "index" ? dir : (dir ? `${dir}/${base}` : base);
+			const realSlug = base === "index" ? dir : (dir ? `${dir}/${base}` : base);
 
-			paths.push({ params: { lang, slug: pathSlug }, props: { entry } });
+			// 检查frontmatter中的slug是否与真实路径一致
+			if (entry.data.slug && entry.data.slug !== realSlug) {
+				console.warn(`⚠️  [SLUG MISMATCH] File: ${id} (${lang})`);
+				console.warn(`   Expected slug: "${realSlug}" (based on directory path)`);
+				console.warn(`   Found slug: "${entry.data.slug}" (in frontmatter)`);
+				console.warn(`   Using real path: "${realSlug}"`);
+				console.warn("");
+			}
+
+			// 始终使用真实的目录路径作为slug
+			paths.push({ params: { lang, slug: realSlug }, props: { entry } });
 		}
 	}
 
