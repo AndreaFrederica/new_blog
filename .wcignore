@@ -1,2 +1,61 @@
+# VS Code 和开发工具
 .vscode/
 .out-of-code-insights/
+.github/
+.idea/
+.DS_Store
+.trae
+.wrangler
+
+# 构建和依赖
+node_modules/
+dist/
+.astro/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# 配置文件
+astro.config.mjs
+tailwind.config.cjs
+postcss.config.mjs
+tsconfig.json
+biome.json
+svelte.config.js
+vercel.json
+wrangler.jsonc
+wrangler.toml.des
+frontmatter.json
+pagefind.yml
+
+# 源码文件夹（非内容相关）
+src/components/
+src/layouts/
+src/pages/
+src/plugins/
+src/styles/
+src/utils/
+src/types/
+src/constants/
+src/i18n/
+src/licenses/
+src/assets/
+src/config.ts
+src/env.d.ts
+src/global.d.ts
+
+# 脚本和工具
+scripts/
+test-browser-lang.html
+tmp_githubstats_script.txt
+
+# 公共资源
+public/
+
+# 小说助手配置
+novel-helper/
+
+# 其他
+LICENSE
+CONTRIBUTING.md
+README.md
