@@ -13,7 +13,7 @@ import type {
 const POST_TYPE_TAG = "博文";
 
 // 统一的slug计算函数，与路由逻辑保持一致
-function getRealSlug(entry: CollectionEntry<"posts">): string {
+export function getRealSlug(entry: CollectionEntry<"posts">): string {
 	const id = entry.id as string;
 	const parts = id.split("/");
 	const file = parts.pop() || "";
@@ -21,7 +21,7 @@ function getRealSlug(entry: CollectionEntry<"posts">): string {
 	const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
 	const dir = parts.join("/");
 	const realSlug = base === "index" ? dir : dir ? `${dir}/${base}` : base;
-	
+
 	// 检查frontmatter中的slug是否与真实路径一致
 	if (entry.data.slug && entry.data.slug !== realSlug) {
 		console.warn(`⚠️  [SLUG MISMATCH] File: ${id}`);
@@ -30,7 +30,7 @@ function getRealSlug(entry: CollectionEntry<"posts">): string {
 		console.warn(`   Using real path: "${realSlug}"`);
 		console.warn("");
 	}
-	
+
 	return realSlug;
 }
 
@@ -45,16 +45,39 @@ function ensureTypeTag<T extends { data: { tags: string[] } }>(
 	}
 }
 
+// 判定文章是否有效：必须有非空标题，且发布时间有效（> 1970-01-01）
+function isValidPost(entry: CollectionEntry<"posts">): boolean {
+	const title = (entry.data.title || "").trim();
+	const published = entry.data.published
+		? new Date(entry.data.published)
+		: undefined;
+	const hasValidDate =
+		!!published &&
+		!Number.isNaN(published.getTime()) &&
+		published.getTime() > 0;
+	if (!title || !hasValidDate) {
+		console.warn(
+			`⚠️  [INVALID POST SKIPPED] ${entry.id} - ` +
+				`${!title ? "missing title" : ""}${!title && !hasValidDate ? ", " : ""}${!hasValidDate ? "missing/invalid published" : ""}`,
+		);
+		return false;
+	}
+	return true;
+}
+
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
 	const allBlogPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
 
-	// 统一为博文追加类型标签
-	ensureTypeTag(allBlogPosts as CollectionEntry<"posts">[], POST_TYPE_TAG);
+	// 过滤无效文章并追加类型标签
+	const validPosts = (allBlogPosts as CollectionEntry<"posts">[]).filter(
+		isValidPost,
+	);
+	ensureTypeTag(validPosts, POST_TYPE_TAG);
 
-	const sorted = allBlogPosts.sort((a, b) => {
+	const sorted = validPosts.sort((a, b) => {
 		const dateA = new Date(a.data.published);
 		const dateB = new Date(b.data.published);
 		return dateA > dateB ? -1 : 1;
@@ -215,7 +238,8 @@ export async function getPostsByLanguage(lang: string) {
 	const allPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
-	ensureTypeTag(allPosts as CollectionEntry<"posts">[], POST_TYPE_TAG);
+	const valid = (allPosts as CollectionEntry<"posts">[]).filter(isValidPost);
+	ensureTypeTag(valid, POST_TYPE_TAG);
 
 	// 使用 pickLocalized 函数来实现语言回退
 	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
@@ -234,13 +258,13 @@ export async function getPostsByLanguage(lang: string) {
 		groupKeyFromSlug(e.slug);
 
 	const filterFunc = pickLocalized(
-		allPosts,
+		valid,
 		lang,
 		groupKeyFunc,
 		fallbackChainOptions,
 	);
 
-	return allPosts.filter(filterFunc);
+	return valid.filter(filterFunc);
 }
 
 // 获取文章的翻译版本
@@ -248,7 +272,8 @@ export async function getPostTranslations(translationKey: string) {
 	const allPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
-	return allPosts.filter((post) => post.data.translationKey === translationKey);
+	const valid = (allPosts as CollectionEntry<"posts">[]).filter(isValidPost);
+	return valid.filter((post) => post.data.translationKey === translationKey);
 }
 
 // 获取当前语言的排序文章
@@ -266,7 +291,10 @@ export async function getSortedPostsWithFallback(lang: string) {
 	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
-	ensureTypeTag(allBlogPosts as CollectionEntry<"posts">[], POST_TYPE_TAG);
+	const validPosts = (allBlogPosts as CollectionEntry<"posts">[]).filter(
+		isValidPost,
+	);
+	ensureTypeTag(validPosts, POST_TYPE_TAG);
 
 	const defaultLang = siteConfig.defaultLang || siteConfig.lang || "zh_cn";
 	const supported = Array.isArray(siteConfig.supportedLangs)
@@ -298,7 +326,7 @@ export async function getSortedPostsWithFallback(lang: string) {
 
 	// 按组分组文章
 	const groups = new Map<string, CollectionEntry<"posts">[]>();
-	for (const post of allBlogPosts) {
+	for (const post of validPosts) {
 		const key = groupKey(post);
 		if (!groups.has(key)) groups.set(key, []);
 		const group = groups.get(key);

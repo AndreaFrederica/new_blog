@@ -4,9 +4,11 @@ import ArchivePanel from "@components/ArchivePanel.svelte";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { getPostUrl } from "@utils/i18n-utils";
 import { siteConfig } from "../config";
 import {
 	getNotesByLanguage,
+	getRealSlug,
 	getSortedPostsListByLanguage,
 } from "../utils/content-utils";
 import { extractLangFromUrl } from "../utils/i18n-utils";
@@ -30,11 +32,21 @@ const notesList = notes.map((n) => ({
 
 // merge posts + notes, then sort by published desc
 const merged = [
-	...sortedPostsList.map((p) => ({
-		slug: p.slug,
-		data: p.data,
-		href: undefined,
-	})),
+	...sortedPostsList.map((p) => {
+		// p here is PostForList (slug,data). We need to warn and convert slug to realSlug by directory.
+		// Since PostForList lacks id, getRealSlug can't be called; but our getSortedPostsListByLanguage was updated to use getRealSlug already.
+		// Still, warn if p.data.slug exists and differs.
+		if (p.data.slug && p.data.slug !== p.slug) {
+			console.warn(
+				`⚠️  [ARCHIVE SLUG MISMATCH] Expected slug: "${p.slug}" (dir) but frontmatter has "${p.data.slug}"`,
+			);
+		}
+		return {
+			slug: p.slug,
+			data: p.data,
+			href: getPostUrl(p.slug, currentLang),
+		};
+	}),
 	...notesList,
 ].sort((a, b) => {
 	const dateA = a.data.published ? new Date(a.data.published).getTime() : 0;

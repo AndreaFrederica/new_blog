@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from "astro:content";
+import { getRealSlug } from "@utils/content-utils";
 import { getPostUrl } from "@utils/i18n-utils";
 import type { Page } from "astro";
 import { siteConfig } from "@/config";
@@ -18,9 +19,23 @@ const currentLang =
 
 let delay = 0;
 const interval = 50;
+
+// 主页渲染阶段：尊重目录生成的真实 slug，并在发现 frontmatter.slug 冲突时给出警告
+const preparedList = page.data.map((entry: CollectionEntry<"posts">) => {
+	const realSlug = getRealSlug(entry);
+	if (entry.data.slug && entry.data.slug !== realSlug) {
+		console.warn(`⚠️  [HOMEPAGE SLUG MISMATCH] File: ${entry.id}`);
+		console.warn(`   Expected slug: "${realSlug}" (based on directory path)`);
+		console.warn(`   Found slug: "${entry.data.slug}" (in frontmatter)`);
+		console.warn(`   Using real path: "${realSlug}"`);
+		console.warn("");
+	}
+	const url = getPostUrl(realSlug, currentLang);
+	return { entry, url };
+});
 ---
 <div class="transition flex flex-col bg-[var(--card-bg)] py-1 md:py-0 md:bg-transparent md:gap-4 mb-4">
-    {page.data.map((entry: CollectionEntry<"posts">) => (
+    {preparedList.map(({ entry, url }) => (
         <PostCard
                 entry={entry}
                 title={entry.data.title}
@@ -28,7 +43,7 @@ const interval = 50;
                 category={entry.data.category}
                 published={entry.data.published}
                 updated={entry.data.updated}
-                url={getPostUrl(entry.slug, currentLang)}
+                url={url}
                 image={entry.data.image}
                 description={entry.data.description}
                 draft={entry.data.draft}

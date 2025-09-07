@@ -2,9 +2,10 @@ import { defineCollection, z } from "astro:content";
 
 const postsCollection = defineCollection({
 	schema: z.object({
-		title: z.string(),
-		published: z.date(),
-		updated: z.date().optional(),
+		// 对缺失字段提供默认值，仅在渲染阶段发出警告，不阻塞构建
+		title: z.string().default(""),
+		published: z.coerce.date().default(new Date(0)),
+		updated: z.coerce.date().optional(),
 		draft: z.boolean().optional().default(false),
 		description: z.string().optional().default(""),
 		image: z.string().optional().default(""),

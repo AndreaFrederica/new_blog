@@ -1,6 +1,20 @@
 {
   "version": 3,
-  "indexes": {},
-  "folderManual": {},
-  "dirUuidMap": {}
+  "indexes": {
+    "d:243337c7-5abb-4dd8-a573-ae2d25d7360e": 10,
+    "d:ff16f3bd-aa50-4ade-8079-12eb4d9e97ab": 20,
+    "d:876a6a3a-8332-48c8-8c06-5238352a939b": 30,
+    "d:21f8bc68-b47f-4aea-b4d0-a9c23040c38e": 40,
+    "d:b0e5f85b-67c5-46c8-ba1c-0c10a4cbf6e0": 50
+  },
+  "folderManual": {
+    "d:\\Projcets\\new_blog\\src\\content\\posts": true
+  },
+  "dirUuidMap": {
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\guide": "243337c7-5abb-4dd8-a573-ae2d25d7360e",
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\license-system-test": "ff16f3bd-aa50-4ade-8079-12eb4d9e97ab",
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper0324": "21f8bc68-b47f-4aea-b4d0-a9c23040c38e",
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\vscode-webview-vue": "876a6a3a-8332-48c8-8c06-5238352a939b",
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper0325": "b0e5f85b-67c5-46c8-ba1c-0c10a4cbf6e0"
+  }
 }

@@ -5,7 +5,10 @@ import Markdown from "@components/misc/Markdown.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getSortedPosts, getSortedPostsWithFallback } from "@utils/content-utils";
+import {
+	getSortedPosts,
+	getSortedPostsWithFallback,
+} from "@utils/content-utils";
 import { getPostUrl, isSupportedLanguage } from "@utils/i18n-utils";
 import { getDir, getPostUrlBySlug } from "@utils/url-utils";
 import { Icon } from "astro-icon/components";
@@ -30,14 +33,19 @@ export async function getStaticPaths() {
 			const parts = id.split("/");
 			const file = parts.pop() || ""; // e.g., index.en.md or guide.en.md
 			const baseNoExt = file.replace(/\.(md|mdx)$/i, "");
-			const base = baseNoExt.replace(/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i, "");
+			const base = baseNoExt.replace(
+				/\.([A-Za-z]{2}(?:[-_][A-Za-z]{2})?)$/i,
+				"",
+			);
 			const dir = parts.join("/");
-			const realSlug = base === "index" ? dir : (dir ? `${dir}/${base}` : base);
+			const realSlug = base === "index" ? dir : dir ? `${dir}/${base}` : base;
 
 			// 检查frontmatter中的slug是否与真实路径一致
 			if (entry.data.slug && entry.data.slug !== realSlug) {
 				console.warn(`⚠️  [SLUG MISMATCH] File: ${id} (${lang})`);
-				console.warn(`   Expected slug: "${realSlug}" (based on directory path)`);
+				console.warn(
+					`   Expected slug: "${realSlug}" (based on directory path)`,
+				);
 				console.warn(`   Found slug: "${entry.data.slug}" (in frontmatter)`);
 				console.warn(`   Using real path: "${realSlug}"`);
 				console.warn("");
