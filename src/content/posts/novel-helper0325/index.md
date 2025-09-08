@@ -2,7 +2,7 @@
 title: 小说助手 0.3.25 版本发布 新功能介绍和教程
 published: 2025-09-07
 description: Andrea小说助手 0.3.25 版本发布 新功能介绍和教程
-tags: ["小说助手", "更新日志"]
+tags: ["小说助手", "更新日志", "使用说明"]
 category: 小说助手
 draft: false
 license: cc_by_nc_4_0
