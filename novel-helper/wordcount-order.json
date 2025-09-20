@@ -8,7 +8,9 @@
     "d:b0e5f85b-67c5-46c8-ba1c-0c10a4cbf6e0": 50,
     "d:ab7486e2-e879-4145-b6a3-5be651c50316": 60,
     "d:369625ef-4ee8-4f00-a300-ca1d1d974dfb": 70,
-    "f:e8545b9b-bf40-43d6-8f88-e827e1582935": 80
+    "f:e8545b9b-bf40-43d6-8f88-e827e1582935": 80,
+    "d:d9e1d144-e4d5-4641-8c4e-7ad4cc548ead": 80,
+    "f:8bab0d24-03a6-4420-8222-ed64232b6869": 90
   },
   "folderManual": {
     "d:\\Projcets\\new_blog\\src\\content\\posts": true
@@ -20,6 +22,7 @@
     "d:\\Projcets\\new_blog\\src\\content\\posts\\vscode-webview-vue": "876a6a3a-8332-48c8-8c06-5238352a939b",
     "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper0325": "b0e5f85b-67c5-46c8-ba1c-0c10a4cbf6e0",
     "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper-guide-base": "ab7486e2-e879-4145-b6a3-5be651c50316",
-    "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper-code-guide-git": "369625ef-4ee8-4f00-a300-ca1d1d974dfb"
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\novel-helper-code-guide-git": "369625ef-4ee8-4f00-a300-ca1d1d974dfb",
+    "d:\\Projcets\\new_blog\\src\\content\\posts\\typest-temple-pub1": "d9e1d144-e4d5-4641-8c4e-7ad4cc548ead"
   }
 }
