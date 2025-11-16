@@ -7,6 +7,7 @@ export const en: Translation = {
 	[Key.archive]: "Archive",
 	[Key.search]: "Search",
 	[Key.notes]: "Notes",
+	[Key.novelHelper]: "Novel Assistant",
 
 	[Key.siteTitle]: "Computer Programming Tips and Insights",
 

@@ -1,5 +1,9 @@
 # 保留所有权利
 
+## UUID
+
+01997ab8-e89d-7a-934f-f0bfae2bea64
+
 ## 类型
 
 许可证
@@ -24,6 +28,10 @@ all_rights_reserved.json
 - **URL**:
 
 # 知识共享署名 4.0 国际 (CC BY 4.0)
+
+## UUID
+
+01997ab8-e89d-7c-ac66-0dbf4e43f3ec
 
 ## 类型
 
@@ -50,6 +58,10 @@ cc_by_4_0.json
 
 # 知识共享署名-非商业性使用 4.0 国际 (CC BY-NC 4.0)
 
+## UUID
+
+01997ab8-e89d-7a-8a0f-41a625bd7a0d
+
 ## 类型
 
 许可证
@@ -75,6 +87,10 @@ cc_by_nc_4_0.json
 
 # MIT 许可证
 
+## UUID
+
+01997ab8-e89d-78-bd43-e30cdedcb55e
+
 ## 类型
 
 许可证
@@ -99,6 +115,10 @@ mit.json
 - **URL**: https://opensource.org/licenses/MIT
 
 # Apache 2.0 许可证
+
+## UUID
+
+01997ab8-e89d-79-8687-2fef4354958d
 
 ## 类型
 

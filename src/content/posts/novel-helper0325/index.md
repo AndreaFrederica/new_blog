@@ -9,6 +9,8 @@ license: cc_by_nc_4_0
 lang: "zh_cn"
 ---
 
+> **小说助手官网：** [https://anh.sirrus.cc](https://anh.sirrus.cc)
+
 # 小说助手 0.3.25 版本发布 新功能介绍和教程
 
 ## [0.3.25] - 2025-09-07

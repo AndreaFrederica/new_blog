@@ -9,6 +9,8 @@ license: cc_by_nc_4_0
 lang: "zh_cn"
 ---
 
+> **小说助手官网：** [https://anh.sirrus.cc](https://anh.sirrus.cc)
+
 # VS Code Git 集成使用指南（图解）
 
 > 适用版本：VS Code 桌面版与 Web（大部分功能相同）。默认已安装 Git（建议 `>= 2.0.0`）。

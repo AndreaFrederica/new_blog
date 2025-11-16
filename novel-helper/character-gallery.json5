@@ -1,11 +1,13 @@
 [
-    // === 示例角色（可删除）===
-    {
-        name: "示例角色",
-        type: "配角",
-        affiliation: "示例阵营",
-        aliases: ["示例"],
-        color: "#FFA500",
-        description: "这是一个示例角色，用于说明角色库格式。"
-    }
+  {
+    name: '示例角色',
+    type: '配角',
+    affiliation: '示例阵营',
+    aliases: [
+      '示例',
+    ],
+    color: '#FFA500',
+    description: '这是一个示例角色，用于说明角色库格式。',
+    uuid: '01997ab8-e89d-7e-b748-175a1264189b',
+  },
 ]

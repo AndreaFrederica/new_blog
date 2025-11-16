@@ -50,6 +50,11 @@ export const navBarConfig: NavBarConfig = {
 		{ name: "Notes", url: "/notes" }, // 这里会被动态替换
 		LinkPreset.Archive,
 		LinkPreset.About,
+		{
+			name: i18n(I18nKey.novelHelper, "zh_cn"),
+			url: "https://anh.sirrus.cc",
+			external: true, // Show an external link icon and will open in a new tab
+		},
 
 		//{
 		//	name: "GitHub",

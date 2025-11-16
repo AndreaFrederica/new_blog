@@ -1,17 +1,21 @@
 [
-    // === 示例专业词汇 ===
-    {
-        name: "灵能",
-        type: "词汇",
-        color: "#1890FF",
-        description: "世界观核心能量。",
-        category: "世界观"
-    },
-    {
-        name: "聚能阵列",
-        type: "词汇",
-        description: "用于聚焦灵能的装置。",
-        aliases: ["阵列", "聚能器"],
-        category: "科技"
-    }
+  {
+    name: '灵能',
+    type: '词汇',
+    color: '#1890FF',
+    description: '世界观核心能量。',
+    category: '世界观',
+    uuid: '01997ab8-e89d-73-9627-fa7d8ec2bd3c',
+  },
+  {
+    name: '聚能阵列',
+    type: '词汇',
+    description: '用于聚焦灵能的装置。',
+    aliases: [
+      '阵列',
+      '聚能器',
+    ],
+    category: '科技',
+    uuid: '01997ab8-e89d-72-a152-68159da188a7',
+  },
 ]

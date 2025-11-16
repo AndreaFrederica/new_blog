@@ -32,5 +32,8 @@
     "Typest",
     "typst"
   ],
-  "andrea.typeset.trimTrailingSpaces": false
+  "andrea.typeset.trimTrailingSpaces": false,
+  "editor.wordWrap": "on",
+  "andrea.typeset.enableSmartExit": true,
+  "AndreaNovelHelper.autoGit.compactStatus": true
 }

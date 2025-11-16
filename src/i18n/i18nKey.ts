@@ -4,6 +4,7 @@ enum I18nKey {
 	archive = "archive",
 	search = "search",
 	notes = "notes",
+	novelHelper = "novelHelper",
 
 	siteTitle = "siteTitle",
 

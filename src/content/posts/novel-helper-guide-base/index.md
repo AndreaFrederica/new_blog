@@ -9,6 +9,8 @@ license: cc_by_nc_4_0
 lang: "zh_cn"
 ---
 
+> **小说助手官网：** [https://anh.sirrus.cc](https://anh.sirrus.cc)
+
 # 安装
 
 ### 便携安装（对于普通用户）

@@ -7,6 +7,7 @@ export const ja: Translation = {
 	[Key.archive]: "Archive",
 	[Key.search]: "検索",
 	[Key.notes]: "ノート",
+	[Key.novelHelper]: "小説アシスタント",
 
 	[Key.siteTitle]: "コンピュータープログラミングのコツと心得",
 

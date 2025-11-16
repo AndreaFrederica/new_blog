@@ -7,6 +7,7 @@ export const zh_CN: Translation = {
 	[Key.archive]: "归档",
 	[Key.search]: "搜索",
 	[Key.notes]: "随笔",
+	[Key.novelHelper]: "小说助手",
 
 	[Key.siteTitle]: "计算机编程技巧与心得",
 
