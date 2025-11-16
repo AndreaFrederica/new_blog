@@ -27,9 +27,35 @@ const currentLang = getCurrentLanguage(currentPath);
 const supportedLangs = siteConfig.supportedLangs || ["zh_cn", "en"];
 const shouldShowLangSwitcher =
 	siteConfig.showLanguageSwitcher && supportedLangs.length > 1;
+
+// 处理链接的国际化
+const processedLinks = links.map(link => {
+	// 动态处理小说助手链接的国际化
+	if (link.url === "https://anh.sirrus.cc") {
+		return {
+			...link,
+			name: i18n(I18nKey.novelHelper, currentLang),
+		};
+	}
+	// 动态处理检查单助手链接的国际化
+	if (link.url === "https://guides.sirrus.cc/#/manuals") {
+		return {
+			...link,
+			name: i18n(I18nKey.guides, currentLang),
+		};
+	}
+	// 动态处理Notes链接的国际化
+	if (link.url === "/notes") {
+		return {
+			...link,
+			name: i18n(I18nKey.notes, currentLang),
+		};
+	}
+	return link;
+});
 ---
 <div id="nav-menu-panel" class:list={["float-panel float-panel-closed absolute transition-all fixed right-4 px-2 py-2"]}>
-    {links.map((link) => (
+    {processedLinks.map((link) => (
         <a href={link.external ? link.url : url(link.url)} class="group flex justify-between items-center py-2 pl-3 pr-1 gap-8
             hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] transition
         "

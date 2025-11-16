@@ -51,8 +51,13 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Archive,
 		LinkPreset.About,
 		{
-			name: i18n(I18nKey.novelHelper, "zh_cn"),
+			name: "小说助手", // 这里会被动态替换为当前语言的翻译
 			url: "https://anh.sirrus.cc",
+			external: true, // Show an external link icon and will open in a new tab
+		},
+		{
+			name: "检查单助手", // 这里会被动态替换为当前语言的翻译
+			url: "https://guides.sirrus.cc/#/manuals",
 			external: true, // Show an external link icon and will open in a new tab
 		},
 

@@ -7,7 +7,8 @@ export const ru: Translation = {
 	[Key.archive]: "Архив",
 	[Key.search]: "Поиск",
 	[Key.notes]: "Заметки",
-	[Key.novelHelper]: "Помощник по романам",
+	[Key.novelHelper]: "Помощник Романов",
+	[Key.guides]: "Помощник по чек-листу",
 
 	[Key.siteTitle]: "Советы и опыт компьютерного программирования",
 

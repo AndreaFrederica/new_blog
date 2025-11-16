@@ -31,6 +31,20 @@ let links: NavBarLink[] = navBarConfig.links.map(
 				name: i18n(I18nKey.notes, lang),
 			};
 		}
+		// 动态处理小说助手链接的国际化
+		if (item.url === "https://anh.sirrus.cc") {
+			return {
+				...item,
+				name: i18n(I18nKey.novelHelper, lang),
+			};
+		}
+		// 动态处理检查单助手链接的国际化
+		if (item.url === "https://guides.sirrus.cc/#/manuals") {
+			return {
+				...item,
+				name: i18n(I18nKey.guides, lang),
+			};
+		}
 		return item;
 	},
 );
