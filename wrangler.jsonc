@@ -1,6 +1,6 @@
 {
     "$schema": "node_modules/wrangler/config-schema.json",
-    "name": "andrea_neo_blog",
+    "name": "andrea-neo-blog",
     // 更新为今天的日期
     "compatibility_date": "2025-09-04",
     "assets": {
