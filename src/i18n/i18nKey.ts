@@ -85,6 +85,9 @@ enum I18nKey {
 	licenses = "licenses",
 	availableLicenses = "availableLicenses",
 	containsDetailedDocumentation = "containsDetailedDocumentation",
+
+	// Footer
+	friendLinks = "friendLinks",
 }
 
 export default I18nKey;

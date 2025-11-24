@@ -88,4 +88,6 @@ export const ru: Translation = {
 	[Key.licenses]: "Лицензии",
 	[Key.availableLicenses]: "Доступные лицензии",
 	[Key.containsDetailedDocumentation]: "Содержит подробную документацию",
+
+	[Key.friendLinks]: "Дружественные ссылки",
 };

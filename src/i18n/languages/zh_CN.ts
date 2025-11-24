@@ -85,4 +85,6 @@ export const zh_CN: Translation = {
 	[Key.licenses]: "许可证",
 	[Key.availableLicenses]: "可用许可证",
 	[Key.containsDetailedDocumentation]: "包含详细说明文档",
+
+	[Key.friendLinks]: "友情链接",
 };

@@ -87,4 +87,6 @@ export const en: Translation = {
 	[Key.licenses]: "Licenses",
 	[Key.availableLicenses]: "Available Licenses",
 	[Key.containsDetailedDocumentation]: "Contains detailed documentation",
+
+	[Key.friendLinks]: "Friend Links",
 };

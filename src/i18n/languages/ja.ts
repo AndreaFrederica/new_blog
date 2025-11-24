@@ -89,4 +89,6 @@ export const ja: Translation = {
 	[Key.licenses]: "ライセンス",
 	[Key.availableLicenses]: "利用可能なライセンス",
 	[Key.containsDetailedDocumentation]: "詳細なドキュメントが含まれています",
+
+	[Key.friendLinks]: "友情リンク",
 };
